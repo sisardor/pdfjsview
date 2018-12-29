@@ -1,0 +1,5 @@
+} else if (type === 'pdfjs') {
+  if (typeof CoreControls.PDFJSDocument !== "undefined") {
+    this.doc = new CoreControls.PDFJSDocument(id);
+  }
+}
