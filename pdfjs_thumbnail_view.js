@@ -64,7 +64,7 @@
 
   var PDFJSThumbnailView = function PDFJSThumbnailView(options) {
     this.id = options.id;
-    this.renderingId = 'thumbnail' + options.id;
+    this.renderingId = 'thumbnail_' + options.id;
     this.pageLabel = null;
 
     this.pdfPage = null;
@@ -182,7 +182,7 @@
         return;
       }
       var id = this.renderingId;
-      var className = 'thumbnailImage';
+      var className = 'thumbnail_image';
 
       if (this.disableCanvasToImageConversion) {
         this.canvas.id = id;

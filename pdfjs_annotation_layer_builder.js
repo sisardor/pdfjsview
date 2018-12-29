@@ -18,7 +18,7 @@
     this.pdfPage = pdfPage;
     this.linkService = linkService;
     this.downloadManager = downloadManager;
-    this.imageResourcesPath = 'images/';
+    this.imageResourcesPath = 'external/images/';
     this.renderInteractiveForms = renderInteractiveForms;
 
     this.div = null;
