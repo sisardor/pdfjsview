@@ -39,22 +39,23 @@
     });
 
     this.page = 1;
-    this.nextSearchResult = document.getElementById('nextSearchResult')
-    this.nextSearchResult.addEventListener('click', () => {
-      console.log('nextSearchResult');
-      this.dispatchEvent('again', false);
-    });
-    this.prevSearchResult = document.getElementById('prevSearchResult')
-    this.prevSearchResult.addEventListener('click', () => {
-      console.log('prevSearchResult');
-      this.dispatchEvent('again', true);
-    });
-    this.caseSensitive = document.getElementById('caseSensitiveSearch')
-    this.caseSensitive.addEventListener('click', () => {
-      this.dispatchEvent();
-    });
-    // this.renderingQueue = new PDFJSRenderingQueue();
-    // this.renderingQueue.setViewer(this);
+
+    if (document.getElementById('nextSearchResult')) {
+      this.nextSearchResult = document.getElementById('nextSearchResult')
+      this.nextSearchResult.addEventListener('click', () => {
+        console.log('nextSearchResult');
+        this.dispatchEvent('again', false);
+      });
+      this.prevSearchResult = document.getElementById('prevSearchResult')
+      this.prevSearchResult.addEventListener('click', () => {
+        console.log('prevSearchResult');
+        this.dispatchEvent('again', true);
+      });
+      this.caseSensitive = document.getElementById('caseSensitiveSearch')
+      this.caseSensitive.addEventListener('click', () => {
+        this.dispatchEvent();
+      });
+    }
 
     // $('#fullSearchButton').on('click', function() {
     //   console.log($('#fullSearchBox').val());
