@@ -66,6 +66,17 @@
     // });
     console.log(this.toolModeMap);
   };
+  function getOutputScale(ctx) {
+    var devicePixelRatio = window.devicePixelRatio || 1;
+    var backingStoreRatio = ctx.webkitBackingStorePixelRatio || ctx.mozBackingStorePixelRatio || ctx.msBackingStorePixelRatio || ctx.oBackingStorePixelRatio || ctx.backingStorePixelRatio || 1;
+    var pixelRatio = devicePixelRatio / backingStoreRatio;
+    return {
+      sx: pixelRatio,
+      sy: pixelRatio,
+      scaled: pixelRatio !== 1
+    };
+  }
+
   exports.CoreControls.PDFJSDocument.prototype = Object.create(exports.CoreControls.BaseDocument.prototype);
   exports.CoreControls.PDFJSDocument.prototype.constructor = exports.CoreControls.PDFJSDocument;
   $.extend(exports.CoreControls.PDFJSDocument.prototype, {
@@ -291,7 +302,14 @@
         };
         loadingTask.promise.then(function(pdf) {
           me.pdfDocument = pdf;
-          me.findController.setDocument(pdf)
+          // me.findController.setDocument(pdf)
+
+          onDocumentLoaded();
+          me.trigger('documentComplete');
+          me.pages.push(new PageInfo(612, 792))
+          me.pages.push(new PageInfo(612, 792))
+          me.pages.push(new PageInfo(612, 792))
+          return
           var pagesCount = pdf.numPages;
           var firstPagePromiseX = pdf.getPage(1);
           var multiplier = exports.utils.getCanvasMultiplier();
@@ -324,14 +342,14 @@
             firstPagePromise.then(function(pdfPage) {
               for (var pageNum = 1; pageNum <= pagesCount; ++pageNum) {
                 var viewport = pdfPage.getViewport({ scale: me.scale });
-                var pageDimension = {
-                  height: viewport.height,
-                  id: pageNum,//'pdf-page-' + pdfPage.pageIndex,
-                  matrix: viewport.transform,
-                  rotation: viewport.rotation,
-                  width: viewport.width
-                }
-                pageDimensions[pageNum] = pageDimension
+                // var pageDimension = {
+                //   height: viewport.height,
+                //   id: pageNum,//'pdf-page-' + pdfPage.pageIndex,
+                //   matrix: viewport.transform,
+                //   rotation: viewport.rotation,
+                //   width: viewport.width
+                // }
+                // pageDimensions[pageNum] = pageDimension
                 var pageView = new PDFJSPageView({
                   container: null,
                   id: pageNum,
@@ -339,9 +357,9 @@
                   scale: me.scale,
                   renderingQueue: me.renderingQueue,
                   defaultViewport: viewport.clone(),
-                  annotationLayerFactory: me,
-                  textLayerFactory: me,
-                  textLayerMode: me.textLayerMode
+                  // annotationLayerFactory: me,
+                  // textLayerFactory: me,
+                  // textLayerMode: me.textLayerMode
                 });
                 me.pages.push(pageView);
                 me.pagesById[pageNum] = pageView;
@@ -428,24 +446,48 @@
         isPageCanvas // 7
       )
       var canvas = canvasMan.canvas
+      // var canvas = document.createElement('canvas');
       // options['drawProgressive'](canvasMan.canvas);
       // options['drawComplete'](canvasMan.canvas, pageIdx);
       // return
       let ctx = canvas.getContext('2d', { alpha: false, });
       me.pdfDocument.getPage(pageIdx + 1).then(function(pdfPage) {
-        var viewport = pdfPage.getViewport(canvas.width / pdfPage.getViewport(1.0).width);
-        var _viewport = pdfPage.getViewport({ scale: 1, rotation: 0 });
-        let transform = [10, 0, 0, pageTransform.y, 0, 0];
+        console.log(pageTransform);
+        // var viewport = pdfPage.getViewport({ scale: pageZoom * multiplier , rotation: 0 });
+        var viewport = pdfPage.getViewport({ scale: 1 , rotation: 0 });
+        // var viewport = pdfPage.getViewport({ scale: pageZoom , rotation: 0 });
+        var transform = [1, 0, 0, 1, Math.ceil(pageTransform.x), Math.ceil(pageTransform.y)];
+        var h = Math.ceil(pageTransform.height) + Math.ceil(pageTransform.y)
+        var w = Math.ceil(pageTransform.width) + Math.ceil(pageTransform.x)
+        var outputScale = getOutputScale(ctx);
+        // canvas.width = w * 2 //viewport.width || 1;
+        // canvas.height = h * 2 //viewport.height || 1;
+        // canvas.style.width = w + 'px' //Math.floor(viewport.width / multiplier) + 'px';
+        // canvas.style.height = h + 'px' //Math.floor(viewport.height / multiplier) + 'px';
+
+        // if (pageTransform.viewportRender === false) {
+          // canvas.width = w * 2
+          // canvas.height = h * 2
+          // canvas.style.width = w + 'px'
+          // canvas.style.height = h + 'px'
+        // } else {
+          canvas.width = viewport.width || 1;
+          canvas.height = viewport.height || 1;
+          canvas.style.width = Math.floor(viewport.width / multiplier) + 'px';
+          canvas.style.height = Math.floor(viewport.height / multiplier) + 'px';
+        // }
         var renderContext = {
           canvasContext: ctx,
-          viewport: _viewport,
-          // transform: transform,
-          enableWebGL: true,
-          // renderInteractiveForms: this.renderInteractiveForms
+          viewport: viewport,
+          transform: transform,
+          // enableWebGL: true,
+          background: 'rgba(0,0,0,0)',
         };
         pdfPage.render(renderContext).then(function() {
-          options['drawProgressive'](canvasMan.canvas);
-          options['drawComplete'](canvasMan.canvas, pageIdx);
+          options['drawProgressive'](canvas);
+          options['drawComplete'](canvas, pageIdx);
+        }).catch(function(err) {
+          console.error('render', err);
         })
       })
 
@@ -476,13 +518,13 @@
         });
       });
     },
-    loadThumbnailAsync: function PDFJSDocumentLoadThumbnailAsync(pageNum, onLoadThumbnail, name) {
-      var thumbnailView = this._thumbnails[pageNum];
-      this._ensurePdfPageLoaded(thumbnailView).then(function() {
-        thumbnailView.draw().then(onLoadThumbnail)
-      })
-    },
-    getBookmarks: function getBookmarks() {
+    // loadThumbnailAsync: function PDFJSDocumentLoadThumbnailAsync(pageNum, onLoadThumbnail, name) {
+    //   var thumbnailView = this._thumbnails[pageNum];
+    //   this._ensurePdfPageLoaded(thumbnailView).then(function() {
+    //     thumbnailView.draw().then(onLoadThumbnail)
+    //   })
+    // },
+    getBookmarksX: function getBookmarks() {
       var me = this;
 
       function copyBookmark(outline) {
@@ -704,6 +746,7 @@
       };
     },
     _ensurePdfPageLoaded: function(pageView) {
+      if (!pageView) return
       var pageNumber = pageView.id;
       var promise = this.pdfDocument.getPage(pageNumber).then(function(pdfPage) {
         if (!pageView.pdfPage) {
