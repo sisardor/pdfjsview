@@ -18,3 +18,44 @@ Promise.all([
   // SystemJS.import('pdfjs-web/pdfjs_find_controller')
   // SystemJS.import('pdfjs-web/pdfjs_thumbnail_view')
 });
+
+
+
+this.doc = exports['CoreControls']['Document'].getDocumentType(type)(id)
+
+var DOCUMENT_TYPES = Object.create({})
+exports.CoreControls.Document.getDocumentType = function(type) {
+  if (_.isUndefined(type)) {
+    type = 'xod'
+  }
+  if (!DOCUMENT_TYPES.hasOwnProperty(type)) {
+    console.warn('there is no type', type);
+    return
+  }
+  return function(id) {
+    return new DOCUMENT_TYPES[type](id)
+  }
+}
+exports.CoreControls.Document.registerDocumentType = function(type, source) {
+  if (_.isUndefined(type) || _.isUndefined(source)) {
+    return;
+  }
+  if (!exports.hasOwnProperty('DOCUMENT_TYPES')) {
+    exports.DOCUMENT_TYPES = Object.create({})
+  }
+
+  if (source.prototype instanceof exports.CoreControls.BaseDocument) {
+    DOCUMENT_TYPES[type] = source
+    console.log('registered document type "'+ type +'"');
+    return;
+  }
+  console.log('Does not extand CoreControls.BaseDocument');
+  return;
+}
+exports.CoreControls.Document.unregisterDocumentType = function(type) {
+  if (DOCUMENT_TYPES.hasOwnProperty(type)) {
+    delete DOCUMENT_TYPES[type]
+  } else {
+    console.warn('no type like this');
+  }
+}

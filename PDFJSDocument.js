@@ -69,6 +69,7 @@
   };
   exports.CoreControls.PDFJSDocument.prototype = Object.create(exports.CoreControls.BaseDocument.prototype);
   exports.CoreControls.PDFJSDocument.prototype.constructor = exports.CoreControls.PDFJSDocument;
+  exports.CoreControls.Document.registerDocumentType('pdfjs', exports.CoreControls.PDFJSDocument)
   $.extend(exports.CoreControls.PDFJSDocument.prototype, {
     getLinearizedURLSize: function getLinearizedURLSize(downloadInfo) {
       function arrayIndexOf(arr, toMatch, responsePos) {
@@ -402,7 +403,48 @@
         });
       }
     },
+    loadCanvasAsync: function PDFJSDocumentLoadCanvasAsync(pageIndex, zoom, pageRotation, drawComplete, drawProgressive, canvasNum) {
 
+      var me = this;
+      var options = getLoadCanvasOptions(pageIndex, zoom, pageRotation, drawComplete, drawProgressive, canvasNum);
+
+      var pageIdx = options['pageIndex'];
+      var pageZoom = options['getZoom']();
+      var rotation = options['getPageRotation']();
+      var multiplier = exports.utils.getCanvasMultiplier();
+      var pageView = me.pages[pageIdx];
+      pageRotation = options['getPageRotation']();
+      var pageTransform = options['getPageTransform']();
+
+      // var canvasMan = exports.CoreControls.CanvasManager.setUpCanvas(pageView,pageZoom,pageRotation,pageTransform, undefined, undefined)
+      // options['drawProgressive'](canvasMan.canvas);
+      // options['drawComplete'](canvasMan.canvas, pageIdx);
+      // return
+      var updateScalePromise = new Promise(function(resolve, reject) {
+        if (me.scale !== pageZoom || me.rotation !== rotation || me.firstRun) {
+          me.scale = pageZoom;
+          me.firstRun = false;
+          me.rotation = rotation;
+          for (var i = 0, ii = me.pages.length; i < ii; i++) {
+            me.pages[i].update(pageZoom, rotation);
+          }
+          resolve(undefined);
+        } else {
+          resolve(undefined);
+        }
+      });
+
+      updateScalePromise.then(function(value) {
+        me._ensurePdfPageLoaded(pageView).then(function() {
+          pageView.draw().promise.then(function(result) {
+            options['drawProgressive'](result);
+            options['drawComplete'](result, pageIdx);
+          }, function(err) {
+            console.error(err);
+          });
+        });
+      });
+    },
     getBookmarks: function getBookmarks() {
       var me = this;
 
@@ -446,49 +488,6 @@
           bookmarks.push(copyBookmark(outlines[i]));
         }
         return bookmarks;
-      });
-    },
-    loadCanvasAsync: function PDFJSDocumentLoadCanvasAsync(pageIndex, zoom, pageRotation, drawComplete, drawProgressive, canvasNum) {
-
-      var me = this;
-      var options = getLoadCanvasOptions(pageIndex, zoom, pageRotation, drawComplete, drawProgressive, canvasNum);
-
-      var pageIdx = options['pageIndex'];
-      var pageZoom = options['getZoom']();
-      var rotation = options['getPageRotation']();
-      var multiplier = exports.utils.getCanvasMultiplier();
-      var pageView = me.pages[pageIdx];
-      pageRotation = options['getPageRotation']();
-      var pageTransform = options['getPageTransform']();
-
-      // var canvasMan = exports.CoreControls.CanvasManager.setUpCanvas(pageView,pageZoom,pageRotation,pageTransform, undefined, undefined)
-      // options['drawProgressive'](canvasMan.canvas);
-      // options['drawComplete'](canvasMan.canvas, pageIdx);
-      // return
-
-      var updateScalePromise = new Promise(function(resolve, reject) {
-        if (me.scale !== pageZoom || me.rotation !== rotation || me.firstRun) {
-          me.scale = pageZoom;
-          me.firstRun = false;
-          me.rotation = rotation;
-          for (var i = 0, ii = me.pages.length; i < ii; i++) {
-            me.pages[i].update(pageZoom, rotation);
-          }
-          resolve(undefined);
-        } else {
-          resolve(undefined);
-        }
-      });
-
-      updateScalePromise.then(function(value) {
-        me._ensurePdfPageLoaded(pageView).then(function() {
-          pageView.draw().promise.then(function(result) {
-            options['drawProgressive'](result);
-            options['drawComplete'](result, pageIdx);
-          }, function(err) {
-            console.error(err);
-          });
-        });
       });
     },
     loadThumbnailAsync: function PDFJSDocumentLoadThumbnailAsync(pageNum, onLoadThumbnail, name) {
@@ -728,7 +727,7 @@
         phraseSearch: true,
         caseSensitive: this.caseSensitive.checked,
         entireWord: false,
-        highlightAll: false,
+        highlightAll: true,
         findPrevious: undefined,
       })
     },
@@ -746,7 +745,7 @@
         phraseSearch: true,
         caseSensitive: this.caseSensitive.checked,
         entireWord: false, //this.entireWord.checked,
-        highlightAll: false, //this.highlightAll.checked,
+        highlightAll: true, //this.highlightAll.checked,
         findPrevious: findPrev,
       });
     }
