@@ -1,27 +1,9 @@
 (function(exports) {
   'use strict';
-
+  var CoreControls = exports.CoreControls;
   pdfjsLib.GlobalWorkerOptions.workerSrc = '//mozilla.github.io/pdf.js/build/pdf.worker.js';
 
-  // exports.Tools.AnnotationEditTool = function(docViewer, name) {
-  //   this['name'] = name || 'AnnotationEditTool';
-  //   console.warn('this tool is disable');
-  // }
-
-
-  // --------------------------------------------------------------------------------
-  //  AnnotationEditTool
-  // --------------------------------------------------------------------------------
-  /**
-   * Creates a new instance of AnnotationEditTool.
-   * @class Represents a tool for DocumentViewer's built-in annotation editing.
-   * @name AnnotationEditTool
-   * @memberOf Tools
-   * @extends Tools.AnnotationSelectTool
-   * @param {CoreControls.DocumentViewer} docViewer an instance of DocumentViewer.
-   */
-
-  exports.CoreControls.PDFJSDocument = function PDFJSDocument() {
+  CoreControls.PDFJSDocument = function PDFJSDocument() {
     this.bookmarks = [];
     this.pages = [];
     this._thumbnails = [];
@@ -65,12 +47,11 @@
     //     console.log($('#fullSearchBox').val());
     //   }
     // });
-    console.log(this.toolModeMap);
   };
-  exports.CoreControls.PDFJSDocument.prototype = Object.create(exports.CoreControls.BaseDocument.prototype);
-  exports.CoreControls.PDFJSDocument.prototype.constructor = exports.CoreControls.PDFJSDocument;
-  exports.CoreControls.Document.registerDocumentType('pdfjs', exports.CoreControls.PDFJSDocument)
-  $.extend(exports.CoreControls.PDFJSDocument.prototype, {
+  CoreControls.PDFJSDocument.prototype = Object.create(CoreControls.BaseDocument.prototype);
+  CoreControls.PDFJSDocument.prototype.constructor = CoreControls.PDFJSDocument;
+  // CoreControls.Document.registerDocumentType('pdfjs', CoreControls.PDFJSDocument)
+  $.extend(CoreControls.PDFJSDocument.prototype, {
     getLinearizedURLSize: function getLinearizedURLSize(downloadInfo) {
       function arrayIndexOf(arr, toMatch, responsePos) {
         var arrLength = arr.length;
@@ -156,7 +137,7 @@
     loadAsync: function PDFJSDocumentLoadAsync(partRetriever, onDocumentLoaded, options) {
 
       var getUserPassword = options['getPassword'];
-      console.log('loadAsync', partRetriever);
+      // console.log('loadAsync', partRetriever);
       var extension = options['extension'];
       var defaultPageSize = options['defaultPageSize'];
       var pageSizes = options['pageSizes'];
@@ -416,7 +397,7 @@
       pageRotation = options['getPageRotation']();
       var pageTransform = options['getPageTransform']();
 
-      // var canvasMan = exports.CoreControls.CanvasManager.setUpCanvas(pageView,pageZoom,pageRotation,pageTransform, undefined, undefined)
+      // var canvasMan = CoreControls.CanvasManager.setUpCanvas(pageView,pageZoom,pageRotation,pageTransform, undefined, undefined)
       // options['drawProgressive'](canvasMan.canvas);
       // options['drawComplete'](canvasMan.canvas, pageIdx);
       // return
@@ -711,29 +692,8 @@
         enhanceTextSelection: false //this.isInPresentationMode ? false : enhanceTextSelection,
       });
     },
-
-// {
-//   "resultCode": 2,
-//   "page_num": 0,
-//   "result_str": "Dynamic",
-//   "ambient_str": "for Dynamic Languages Andreas Gal∗+, Brendan Eich∗,",
-//   "result_str_start": 4,
-//   "result_str_end": 11,
-//   "quads": [
-//   {
-//     "x1": 460.87058800000034,
-//     "y1": 95.07735519999994,
-//     "x2": 529.6070104000004,
-//     "y2": 95.07735519999994,
-//     "x3": 529.6070104000004,
-//     "y3": 74.11391199999991,
-//     "x4": 460.87058800000034,
-//     "y4": 74.11391199999991
-//   }
-//   ]
-// }
     textSearch: function searchText(pattern, fullSearch, onSearchCallback) {
-      console.log('searchText', pattern, fullSearch, onSearchCallback);
+      // console.log('searchText', pattern, fullSearch, onSearchCallback);
       // PDFViewerApplication.findController.executeCommand('find' + evt.type, {
       //   query: evt.query,
       //   phraseSearch: evt.phraseSearch,
@@ -779,7 +739,6 @@
     PAUSED: 2,
     FINISHED: 3,
   };
-
   var EventBus = function EventBus() {
     var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
         _ref$dispatchToDOM = _ref.dispatchToDOM,
@@ -847,7 +806,6 @@
       document.dispatchEvent(event);
     }
   }
-
   var globalEventBus = null;
   function getGlobalEventBus() {
     var dispatchToDOM = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : false;
@@ -863,7 +821,7 @@
         return 1;
       },
       'getPageRotation': function getPageRotation() {
-        return exports.CoreControls.PageRotation.e_0;
+        return CoreControls.PageRotation.e_0;
       },
       'finishedLoading': function finishedLoading() {
         return true;

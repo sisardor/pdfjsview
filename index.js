@@ -21,7 +21,10 @@ Promise.all([
 
 
 
-this.doc = exports['CoreControls']['Document'].getDocumentType(type)(id)
+CoreControls.Document.registerDocumentType('pdf', CoreControls.PDFDocument)
+
+
+this.doc = CoreControls.Document.getDocumentType(type)(id)
 
 var DOCUMENT_TYPES = Object.create({})
 exports.CoreControls.Document.getDocumentType = function(type) {
@@ -65,6 +68,26 @@ exports.CoreControls.Document.unregisterDocumentType = function(type) {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+if (CoreControls.PDFJSDocument !== undefined
+  && this.doc.doc instanceof CoreControls.PDFJSDocument) {
+  var mainArguments = Array.prototype.slice.call(arguments);
+  mainArguments.unshift(this.currentPattern);
+  this.doc.doc.textSearch.apply(this.doc.doc, mainArguments)
+  return
+}
 
 
 
@@ -141,4 +164,39 @@ let scale = MULTIPLIER * this.doc.scale
 //     ctx.rect(new_x * scale, (p.y - height) * scale,  l_len * scale, height * scale);
 //     ctx.stroke();
 //   }
+// }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// {
+//   "resultCode": 2,
+//   "page_num": 0,
+//   "result_str": "Dynamic",
+//   "ambient_str": "for Dynamic Languages Andreas Gal∗+, Brendan Eich∗,",
+//   "result_str_start": 4,
+//   "result_str_end": 11,
+//   "quads": [
+//   {
+//     "x1": 460.87058800000034,
+//     "y1": 95.07735519999994,
+//     "x2": 529.6070104000004,
+//     "y2": 95.07735519999994,
+//     "x3": 529.6070104000004,
+//     "y3": 74.11391199999991,
+//     "x4": 460.87058800000034,
+//     "y4": 74.11391199999991
+//   }
+//   ]
 // }
