@@ -505,7 +505,7 @@
 
               for (var j = 0, jj = textItems.length; j < jj; j++) {
                 strBuf.push(textItems[j].str);
-                console.log(cach.commonObjs._objs[textItems[j].fontName].data.data);
+                // console.log(cach.commonObjs._objs[textItems[j].fontName].data.data);
               }
 
               // Store the normalized page content (text items) as one string.

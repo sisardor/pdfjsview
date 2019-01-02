@@ -59,3 +59,86 @@ exports.CoreControls.Document.unregisterDocumentType = function(type) {
     console.warn('no type like this');
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+var me = this
+const textContent = this.findController._pageTextContents[0]
+// const item = textContent.items[0];
+// const transform = item.transform;
+// const x = transform[4];
+// const y = transform[5];
+// const width = item.width;
+// const height = item.height;
+// var x1 = x;
+// var x2 = x + width
+// var x3 = x + width
+// var x4 = x
+
+// var xy = pdfjsLib.Util.transform(this.viewport.transform, textContent.items[0].transform)
+// var res = convertToCanvasCoords([x, y, width, height])
+// var tx = pdfjsLib.Util.transform(
+//   pdfjsLib.Util.transform(this.viewport.transform, item.transform),
+// [1, 0, 0, -1, 0, 0]);
+// console.log('===========');
+// console.log(tx);
+let c = document.getElementById("page1");
+let ctx = c.getContext("2d");
+let MULTIPLIER = exports.utils.getCanvasMultiplier();
+let scale = MULTIPLIER * this.doc.scale
+// for (var j = 0; j < textContent.items.length; j++) {
+//   let item = textContent.items[j]
+//   if (item.str === ' ') continue
+//   let transform = item.transform;
+//   let x = transform[4];
+//   let y = transform[5];
+//   let width = item.width;
+//   let height = transform[0] // item.height;
+//   let page = this.doc.pages[0]
+//   let p = page.matrix.mult({x,y})
+//
+//   // let str = item.str;
+//   let l_len = width / item.str.length
+//   for(let i = 0; i < item.str.length; i++) {
+//     if (item.str[i] === ' ') continue
+//     // let _i = i > 0 ?  i : 1
+//     let new_x = x + (l_len * i)
+//     let descent = 11//textContent.styles[item.fontName].descent * -1
+//     ctx.rect(new_x * scale, (p.y - height) * scale,  l_len * scale, height * scale);
+//     ctx.stroke();
+//   }
+// }
