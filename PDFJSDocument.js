@@ -711,6 +711,27 @@
         enhanceTextSelection: false //this.isInPresentationMode ? false : enhanceTextSelection,
       });
     },
+
+// {
+//   "resultCode": 2,
+//   "page_num": 0,
+//   "result_str": "Dynamic",
+//   "ambient_str": "for Dynamic Languages Andreas Gal∗+, Brendan Eich∗,",
+//   "result_str_start": 4,
+//   "result_str_end": 11,
+//   "quads": [
+//   {
+//     "x1": 460.87058800000034,
+//     "y1": 95.07735519999994,
+//     "x2": 529.6070104000004,
+//     "y2": 95.07735519999994,
+//     "x3": 529.6070104000004,
+//     "y3": 74.11391199999991,
+//     "x4": 460.87058800000034,
+//     "y4": 74.11391199999991
+//   }
+//   ]
+// }
     textSearch: function searchText(pattern, fullSearch, onSearchCallback) {
       console.log('searchText', pattern, fullSearch, onSearchCallback);
       // PDFViewerApplication.findController.executeCommand('find' + evt.type, {
