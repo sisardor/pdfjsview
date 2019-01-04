@@ -3,7 +3,8 @@
 (function (exports) {
   'use strict';
 
-  var RenderingCancelledException = pdfjsLib.RenderingCancelledException;
+  /** @suppress {visibility} */
+  var RenderingCancelledException = pdfjsLib['RenderingCancelledException'];
 
   var MULTIPLIER = exports.utils.getCanvasMultiplier();
   var MAX_NUM_SCALING_STEPS = 3;
@@ -73,7 +74,7 @@
     this.pdfPageRotate = options.defaultViewport.rotation;
 
     this.renderTask = null;
-    this.renderingState = RenderingStates.INITIAL;
+    this.renderingState = exports.RenderingStates.INITIAL;
     this.resume = null;
     this.disableCanvasToImageConversion = options.disableCanvasToImageConversion;
 
@@ -146,7 +147,7 @@
         this.renderTask.cancel();
         this.renderTask = null;
       }
-      this.renderingState = RenderingStates.INITIAL;
+      this.renderingState = exports.RenderingStates.INITIAL;
       this.resume = null;
     },
 
@@ -178,7 +179,7 @@
       if (!this.canvas) {
         return;
       }
-      if (this.renderingState !== RenderingStates.FINISHED) {
+      if (this.renderingState !== exports.RenderingStates.FINISHED) {
         return;
       }
       var id = this.renderingId;
@@ -212,11 +213,11 @@
     draw: function draw() {
       var _this = this;
 
-      // if (this.renderingState !== RenderingStates.INITIAL) {
+      // if (this.renderingState !== exports.RenderingStates.INITIAL) {
       //   console.error('Must be in new state before drawing');
       //   return Promise.resolve(undefined);
       // }
-      this.renderingState = RenderingStates.RUNNING;
+      this.renderingState = exports.RenderingStates.RUNNING;
 
       var renderCapability = createPromiseCapability();
       var finishRenderTask = function finishRenderTask(error) {
@@ -232,7 +233,7 @@
           return;
         }
 
-        _this.renderingState = RenderingStates.FINISHED;
+        _this.renderingState = exports.RenderingStates.FINISHED;
         _this._convertCanvasToImage();
         // console.log(this.image);
         if (!error) {
@@ -252,9 +253,9 @@
       });
       var renderContinueCallback = function renderContinueCallback(cont) {
         if (!_this.renderingQueue.isHighestPriority(_this)) {
-          _this.renderingState = RenderingStates.PAUSED;
+          _this.renderingState = exports.RenderingStates.PAUSED;
           _this.resume = function () {
-            _this.renderingState = RenderingStates.RUNNING;
+            _this.renderingState = exports.RenderingStates.RUNNING;
             cont();
           };
           return;
@@ -278,7 +279,7 @@
     },
 
     setImage: function setImage() {
-      if (this.renderingState !== RenderingStates.INITIAL) {
+      if (this.renderingState !== exports.RenderingStates.INITIAL) {
         return;
       }
       var img = pageView.canvas;
@@ -289,7 +290,7 @@
         this.setPdfPage(pageView.pdfPage);
       }
 
-      this.renderingState = RenderingStates.FINISHED;
+      this.renderingState = exports.RenderingStates.FINISHED;
 
       var ctx = this._getPageDrawContext(true);
       var canvas = ctx.canvas;

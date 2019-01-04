@@ -1,7 +1,7 @@
 (function(exports) {
   'use strict';
 
-  var renderTextLayer = pdfjsLib.renderTextLayer;
+  var renderTextLayer = pdfjsLib['renderTextLayer'];
 
   function _classCallCheck(instance, Constructor) {
     if (!(instance instanceof Constructor)) {
@@ -45,7 +45,6 @@
   PDFJSTextLayerBuilder.prototype = {
     _finishRendering: function _finishRendering() {
       this.renderingDone = true;
-
       if (!this.enhanceTextSelection) {
         var endOfContent = document.createElement('div');
         endOfContent.className = 'endOfContent';
@@ -252,27 +251,27 @@
       }
 
 
-      var me = this
-      function convertToCanvasCoords([x, y, width, height]) {
-        var scale = me.canvasInfo.scale;
-        var canvasHeight = me.canvasInfo.canvasHeight;
-        return [x * scale, canvasHeight - ((y + height) * scale), width * scale, height * scale];
-      }
+      // var me = this
+      // function convertToCanvasCoords([x, y, width, height]) {
+      //   var scale = me.canvasInfo.scale;
+      //   var canvasHeight = me.canvasInfo.canvasHeight;
+      //   return [x * scale, canvasHeight - ((y + height) * scale), width * scale, height * scale];
+      // }
 
-      const textContent = this.findController._pageTextContents[0]
-      const item = textContent.items[0];
-      const transform = item.transform;
-      const x = transform[4];
-      const y = transform[5];
-      const width = item.width;
-      const height = item.height;
-      var x1 = x;
-      var x2 = x + width
-      var x3 = x + width
-      var x4 = x
+      // const textContent = this.findController._pageTextContents[0]
+      // const item = textContent.items[0];
+      // const transform = item.transform;
+      // const x = transform[4];
+      // const y = transform[5];
+      // const width = item.width;
+      // const height = item.height;
+      // var x1 = x;
+      // var x2 = x + width
+      // var x3 = x + width
+      // var x4 = x
 
-      var xy = pdfjsLib.Util.transform(this.viewport.transform, textContent.items[0].transform)
-      var res = convertToCanvasCoords([x, y, width, height])
+      // var xy = pdfjsLib.Util.transform(this.viewport.transform, textContent.items[0].transform)
+      // var res = convertToCanvasCoords([x, y, width, height])
       // console.log('===========');
       // console.log(xy);
       // console.log('===========');
@@ -320,8 +319,8 @@
     _bindEvents: function _bindEvents() {
       var _this = this;
 
-      var eventBus = this.eventBus,
-          _boundEvents = this._boundEvents;
+      var eventBus = this.eventBus;
+      var _boundEvents = this._boundEvents;
 
 
       _boundEvents.pageCancelled = function (evt) {
@@ -340,8 +339,8 @@
           delete _boundEvents[name];
         }
       };
+
       _boundEvents.updateTextLayerMatches = function (evt) {
-        console.log(evt);
         if (evt.pageIndex !== _this.pageIdx && evt.pageIndex !== -1) {
           return;
         }
@@ -353,10 +352,10 @@
     },
 
     _bindMouse: function _bindMouse() {
-      let div = this.textLayerDiv;
-      let expandDivsTimer = null;
+      var div = this.textLayerDiv;
+      var expandDivsTimer = null;
 
-      div.addEventListener('mousedown', (evt) => {
+      div.addEventListener('mousedown', function(evt) {
         if (this.enhanceTextSelection && this.textLayerRenderTask) {
           this.textLayerRenderTask.expandTextDivs(true);
           if ((typeof PDFJSDev === 'undefined' ||
@@ -368,7 +367,7 @@
           return;
         }
 
-        let end = div.querySelector('.endOfContent');
+        var end = div.querySelector('.endOfContent');
         if (!end) {
           return;
         }
@@ -378,25 +377,25 @@
           // of the `endOfContent` div is adjusted to start at mouse click
           // location. This avoids flickering when the selection moves up.
           // However it does not work when selection is started on empty space.
-          let adjustTop = evt.target !== div;
+          var adjustTop = evt.target !== div;
           if (typeof PDFJSDev === 'undefined' || PDFJSDev.test('GENERIC')) {
             adjustTop = adjustTop && window.getComputedStyle(end).
               getPropertyValue('-moz-user-select') !== 'none';
           }
           if (adjustTop) {
-            let divBounds = div.getBoundingClientRect();
-            let r = Math.max(0, (evt.pageY - divBounds.top) / divBounds.height);
+            var divBounds = div.getBoundingClientRect();
+            var r = Math.max(0, (evt.pageY - divBounds.top) / divBounds.height);
             end.style.top = (r * 100).toFixed(2) + '%';
           }
         }
         end.classList.add('active');
       });
 
-      div.addEventListener('mouseup', () => {
+      div.addEventListener('mouseup', function() {
         if (this.enhanceTextSelection && this.textLayerRenderTask) {
           if (typeof PDFJSDev === 'undefined' ||
               !PDFJSDev.test('FIREFOX || MOZCENTRAL')) {
-            expandDivsTimer = setTimeout(() => {
+            expandDivsTimer = setTimeout(function() {
               if (this.textLayerRenderTask) {
                 this.textLayerRenderTask.expandTextDivs(false);
               }
@@ -408,7 +407,7 @@
           return;
         }
 
-        let end = div.querySelector('.endOfContent');
+        var end = div.querySelector('.endOfContent');
         if (!end) {
           return;
         }
