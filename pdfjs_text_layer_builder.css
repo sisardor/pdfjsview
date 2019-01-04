@@ -23,9 +23,12 @@
     opacity: 0.2;
     line-height: 1.0;
     user-select: text;
+    -moz-user-select: text;
+    -webkit-user-select: text;
+    -ms-user-select: text;
     z-index: 40;
   }
-  
+
   .textLayer > span {
     color: transparent;
     /* color: red; */
@@ -34,34 +37,37 @@
     cursor: text;
     transform-origin: 0% 0%;
     user-select: text;
+    -moz-user-select: text;
+    -webkit-user-select: text;
+    -ms-user-select: text;
   }
-  
+
   .textLayer .highlight {
     margin: -1px;
     padding: 1px;
-  
+
     background-color: rgb(180, 0, 170);
     border-radius: 4px;
   }
-  
+
   .textLayer .highlight.begin {
     border-radius: 4px 0px 0px 4px;
   }
-  
+
   .textLayer .highlight.end {
     border-radius: 0px 4px 4px 0px;
   }
-  
+
   .textLayer .highlight.middle {
     border-radius: 0px;
   }
-  
+
   .textLayer .highlight.selected {
     background-color: rgb(0, 100, 0);
   }
-  
+
   .textLayer ::selection { background: rgb(0,0,255); }
-  
+
   .textLayer .endOfContent {
     display: block;
     position: absolute;
@@ -73,8 +79,7 @@
     cursor: default;
     user-select: none;
   }
-  
+
   .textLayer .endOfContent.active {
     top: 0px;
   }
-  

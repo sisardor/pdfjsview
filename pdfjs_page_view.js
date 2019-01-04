@@ -1,8 +1,7 @@
 (function(exports) {
   'use strict';
 
-
-  var RenderingCancelledException = pdfjsLib.RenderingCancelledException;
+  var RenderingCancelledException = pdfjsLib['RenderingCancelledException'];
   var DEFAULT_SCALE = 1.0;
   var CSS_UNITS = 96.0 / 72.0;
   var MULTIPLIER = exports.utils.getCanvasMultiplier();
@@ -14,7 +13,7 @@
 
 
   var PDFJSPageView = function PDFJSPageView(options) {
-    exports.PageInfo.call(this);
+    exports.PageInfo.call(this, options.defaultViewport.width, options.defaultViewport.height);
     var container = options.container;
     var defaultViewport = options.defaultViewport;
     this.id = options.id;
@@ -24,8 +23,8 @@
     this.rotation = 0;
     this._rotation = 0;
     this.matrix = options.matrix;
-    this.width = defaultViewport.width;
-    this.height = defaultViewport.height;
+    // this.width = defaultViewport.width;
+    // this.height = defaultViewport.height;
     this.scale = options.scale || DEFAULT_SCALE;
     this.viewport = defaultViewport;
     this.pdfPageRotate = defaultViewport.rotation;
@@ -33,6 +32,7 @@
     this.imageResourcesPath = options.imageResourcesPath || '';
     this.renderInteractiveForms = options.renderInteractiveForms || false;
 
+    this.eventBus = options.eventBus || getGlobalEventBus();
     this.renderingQueue = options.renderingQueue;
     this.textLayerFactory = options.textLayerFactory;
     this.annotationLayerFactory = options.annotationLayerFactory;
@@ -41,7 +41,7 @@
 
     this.paintTask = null;
     this.paintedViewportMap = new WeakMap();
-    this.renderingState = RenderingStates.INITIAL;
+    this.renderingState = exports.RenderingStates.INITIAL;
     this.resume = null;
     this.error = null;
 
@@ -63,7 +63,7 @@
       this.pdfPageRotate = pdfPage.rotate;
 
       var totalRotation = (this._rotation + this.pdfPageRotate) % 4 * 90;
-      this.viewport = pdfPage.getViewport({ scale: this.scale * MULTIPLIER, rotation: totalRotation });
+      this.viewport = pdfPage['getViewport']({ scale: this.scale * MULTIPLIER, rotation: totalRotation });
       this.stats = pdfPage.stats;
       this.reset();
     },
@@ -71,7 +71,7 @@
     destroy: function destroy() {
       this.reset();
       if (this.pdfPage) {
-        this.pdfPage.cleanup();
+        this.pdfPage['cleanup']();
       }
     },
 
@@ -172,8 +172,32 @@
       this.reset( /* keepZoomLayer = */ true, /* keepAnnotations = */ true);
     },
 
-    cancelRendering: function cancelRendering(params) {
-      // console.warn('not implemented');
+    cancelRendering: function cancelRendering(keepAnnotations = false) {
+      const renderingState = this.renderingState;
+
+      if (this.paintTask) {
+        this.paintTask.cancel();
+        this.paintTask = null;
+      }
+      this.renderingState = RenderingStates.INITIAL;
+      this.resume = null;
+
+      if (this.textLayer) {
+        this.textLayer.cancel();
+        this.textLayer = null;
+      }
+      if (!keepAnnotations && this.annotationLayer) {
+        this.annotationLayer.cancel();
+        this.annotationLayer = null;
+      }
+
+      if (renderingState !== RenderingStates.INITIAL) {
+        this.eventBus.dispatch('pagecancelled', {
+          source: this,
+          pageNumber: this.id,
+          renderingState,
+        });
+      }
     },
 
     cssTransform: function cssTransform(target) {
@@ -195,16 +219,18 @@
       var cssTransformX = 'rotate(' + relativeRotation + 'deg) ' + 'scale(' + scaleX + ',' + scaleY + ')';
       target.style.transform = cssTransformX;
     },
-
+    getWidgetContainerParent: function(pageIndex) {
+      return $('#pageContainer' + pageIndex);
+    },
     draw: function draw() {
       var _this = this;
 
       if (!this.pdfPage) {
-        this.renderingState = RenderingStates.FINISHED;
+        this.renderingState = exports.RenderingStates.FINISHED;
         return Promise.reject(new Error('Page is not loaded'));
       }
 
-      this.renderingState = RenderingStates.RUNNING;
+      this.renderingState = exports.RenderingStates.RUNNING;
 
       var pdfPage = this.pdfPage;
 
@@ -217,7 +243,7 @@
 
       if (this.textLayerMode !== TextLayerMode.DISABLE && this.textLayerFactory) {
         var textLayerDiv = document.createElement('div');
-        var pageContDiv = CoreControls.CanvasManager.getWidgetContainerParent(pdfPage.pageIndex);
+        var pageContDiv = this.getWidgetContainerParent(pdfPage.pageIndex);
         if (pageContDiv.length) {
           pageContDiv = pageContDiv[0];
           textLayerDiv.className = 'textLayer';
@@ -245,9 +271,9 @@
       if (this.renderingQueue) {
         renderContinueCallback = function renderContinueCallback(cont) {
           if (!_this.renderingQueue.isHighestPriority(_this)) {
-            _this.renderingState = RenderingStates.PAUSED;
+            _this.renderingState = exports.RenderingStates.PAUSED;
             _this.resume = function() {
-              _this.renderingState = RenderingStates.RUNNING;
+              _this.renderingState = exports.RenderingStates.RUNNING;
               cont();
             };
             return;
@@ -269,7 +295,7 @@
           return Promise.resolve(undefined);
         }
 
-        _this.renderingState = RenderingStates.FINISHED;
+        _this.renderingState = exports.RenderingStates.FINISHED;
 
         // this._resetZoomLayer(/* removeFromDOM = */ true);
 
@@ -293,7 +319,7 @@
       var resultPromise = paintTask.promise.then(function(cw) {
         return finishPaintTask(null, cw).then(function() {
           if (textLayer) {
-            var readableStream = pdfPage.streamTextContent({
+            var readableStream = pdfPage['streamTextContent']({
               normalizeWhitespace: true
             });
             textLayer.setTextContentStream(readableStream);
@@ -368,7 +394,7 @@
         renderInteractiveForms: this.renderInteractiveForms
       };
 
-      var renderTask = this.pdfPage.render(renderContext);
+      var renderTask = this.pdfPage['render'](renderContext);
       renderTask.onContinue = function(cont) {
         showCanvas();
         if (result.onRenderContinue) {
