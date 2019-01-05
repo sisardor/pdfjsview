@@ -13,6 +13,7 @@
     var textLayerDiv = _ref.textLayerDiv,
       eventBus = _ref.eventBus,
       pageIndex = _ref.pageIndex,
+      doc = _ref.doc,
       viewport = _ref.viewport,
       _ref$findController = _ref.findController,
       findController = _ref$findController === undefined ? null : _ref$findController,
@@ -35,7 +36,8 @@
     this.findController = findController;
     this.textLayerRenderTask = null;
     this.enhanceTextSelection = enhanceTextSelection;
-
+    this.doc = doc;
+    this.flag1 = false
     this._boundEvents = Object.create(null);
     this._bindEvents();
 
@@ -249,34 +251,99 @@
       if (prevEnd) {
         appendTextToDiv(prevEnd.divIdx, prevEnd.offset, infinity.offset);
       }
+      return
+      if (this.pageNumber === 1 && this.flag1 === false) {
+        this.flag1 = true
+        // var me = this
+        // function convertToCanvasCoords([x, y, width, height]) {
+        //   var scale = me.canvasInfo.scale;
+        //   var canvasHeight = me.canvasInfo.canvasHeight;
+        //   return [x * scale, canvasHeight - ((y + height) * scale), width * scale, height * scale];
+        // }
 
+        const textContent = this.findController._pageTextContents[0]
+        // const item = textContent.items[0];
+        // const transform = item.transform;
+        // const x = transform[4];
+        // const y = transform[5];
+        // const width = item.width;
+        // const height = item.height;
+        // var x1 = x;
+        // var x2 = x + width
+        // var x3 = x + width
+        // var x4 = x
 
-      // var me = this
-      // function convertToCanvasCoords([x, y, width, height]) {
-      //   var scale = me.canvasInfo.scale;
-      //   var canvasHeight = me.canvasInfo.canvasHeight;
-      //   return [x * scale, canvasHeight - ((y + height) * scale), width * scale, height * scale];
-      // }
+        // var xy = pdfjsLib.Util.transform(this.viewport.transform, textContent.items[0].transform)
+        // var res = convertToCanvasCoords([x, y, width, height])
+        // console.log('===========');
+        // console.log(xy);
+        // console.log('===========');
+        let c = document.getElementById("page1");
+        let ctx = c.getContext("2d");
+        let MULTIPLIER = exports.utils.getCanvasMultiplier();
+        let scale = MULTIPLIER * this.doc.scale
+        let line_y = 0
+        for (var j = 0; j < textContent.items.length; j++) {
+          let item = textContent.items[j]
+          // console.log(item);
+          if (item.str === ' ') continue
+          let transform = item.transform;
+          let x = transform[4];
+          let y = transform[5];
+          let width = item.width;
+          let height = transform[0];
+          let page = this.doc.pages[0];
+          let p = page.matrix.mult({x,y})
+          if (line_y !== p.y) {
+            // console.log('new line');
+            console.log(item.str);
+            line_y = p.y
+          }
+          line_y = p.y
+          let str = item.str;
+          // ctx.rect(x * scale, (p.y - height) * scale,  width * scale, height * scale);
+          // ctx.stroke();
+          let l_len = width / item.str.length
+          let word = ''
+          let word_len = 0
+          let word_x = x
+          for(let i = 0, len = item.str.length; i < len; i++) {
+            let new_x = x + (l_len * i)
+            if (item.str[i] === ' ') {
+              console.log('  ', word, word_len);
+              word = '';
 
-      // const textContent = this.findController._pageTextContents[0]
-      // const item = textContent.items[0];
-      // const transform = item.transform;
-      // const x = transform[4];
-      // const y = transform[5];
-      // const width = item.width;
-      // const height = item.height;
-      // var x1 = x;
-      // var x2 = x + width
-      // var x3 = x + width
-      // var x4 = x
+              ctx.rect(word_x * scale, (p.y - height) * scale,  word_len, height * scale);
+              ctx.stroke();
+              word_len = 0;
+              word_x = new_x
 
-      // var xy = pdfjsLib.Util.transform(this.viewport.transform, textContent.items[0].transform)
-      // var res = convertToCanvasCoords([x, y, width, height])
-      // console.log('===========');
-      // console.log(xy);
-      // console.log('===========');
+              continue
+            }
 
+            word += item.str[i]
+            word_len += l_len * scale
+            if (len - 1 === i) {
+              console.log('  ', word, word_len);
+              word = '';
 
+              // ctx.rect(word_x * scale, (p.y - height) * scale,  word_len, height * scale);
+              // ctx.stroke();
+              word_x = new_x
+              word_len = 0;
+            }
+            // console.log(item.str[i], p.y);
+            // let _i = i > 0 ?  i : 1
+
+            let descent = 11//textContent.styles[item.fontName].descent * -1
+            // ctx.rect(new_x * scale, (p.y - height) * scale,  l_len * scale, height * scale);
+            // ctx.stroke();
+          }
+          console.log('---------------------------', this.pageNumber);
+
+        }
+        console.log('\n\n');
+      }
     },
 
     _updateMatches: function _updateMatches() {

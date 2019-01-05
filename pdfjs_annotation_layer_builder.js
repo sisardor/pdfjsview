@@ -3,8 +3,7 @@
 (function (exports) {
   'use strict';
 
-  var AnnotationLayer = pdfjsLib['AnnotationLayer'];
-
+  var AnnotationLayer = pdfjsLib.AnnotationLayer;
   var PDFJSAnnotationLayerBuilder = function PDFJSAnnotationLayerBuilder(_ref) {
     var pageDiv = _ref.pageDiv,
         pdfPage = _ref.pdfPage,
@@ -19,7 +18,7 @@
     this.pdfPage = pdfPage;
     this.linkService = linkService;
     this.downloadManager = downloadManager;
-    this.imageResourcesPath = 'external/images/';
+    this.imageResourcesPath = '../pdfjs/images/';
     this.renderInteractiveForms = renderInteractiveForms;
 
     this.div = null;
@@ -32,7 +31,7 @@
 
       var intent = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 'display';
 
-      this.pdfPage['getAnnotations']({
+      this.pdfPage.getAnnotations({
         intent: intent
       }).then(function (annotations) {
         if (_this._cancelled) {
@@ -54,7 +53,7 @@
           return;
         }
 
-        var pageDiv = _this.getWidgetContainerParent(_this.pdfPage.pageIndex);
+        var pageDiv = CoreControls.CanvasManager.getWidgetContainerParent(_this.pdfPage.pageIndex);
         if (pageDiv.length) {
           var div = document.createElement('div');
           div.className = 'annotationLayer';
@@ -65,9 +64,6 @@
           AnnotationLayer.render(parameters);
         }
       });
-    },
-    getWidgetContainerParent: function(pageIndex) {
-      return $('#pageContainer' + pageIndex);
     },
 
     cancel: function cancel() {
