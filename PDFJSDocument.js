@@ -37,9 +37,13 @@
       this.caseSensitive.addEventListener('click', function() {
         me.dispatchEvent();
       });
+      this.wholeWordSearch = document.getElementById('wholeWordSearch')
+      this.wholeWordSearch.addEventListener('click', function() {
+        me.dispatchEvent('entirewordchange');
+      });
       this.clearSearchResults = document.getElementById('clearSearchResults')
       this.clearSearchResults.addEventListener('click', function() {
-        me.eventBus.dispatch('findbarclose', { source: this });
+        me.eventBus.dispatch('findbarclose');
       });
     }
 
@@ -48,6 +52,8 @@
       var pattern = this.currentPattern
       me.textSearch(pattern, fullSearch, onSearchCallback)
     }
+
+    console.log(this);
   };
   exports.CoreControls.PDFJSDocument.prototype = Object.create(exports.CoreControls.BaseDocument.prototype);
   exports.CoreControls.PDFJSDocument.prototype.constructor = exports.CoreControls.PDFJSDocument;
@@ -674,7 +680,7 @@
         query: pattern,
         phraseSearch: true,
         caseSensitive: this.caseSensitive.checked,
-        entireWord: false,
+        entireWord: this.wholeWordSearch.checked,
         highlightAll: true,
         findPrevious: undefined,
       })
@@ -685,14 +691,26 @@
     findPreviousButton: function findPreviousButton() {
 
     },
+    dispatchEvent2: function(type, findPrev) {
+      this.findController.executeCommand('find', {
+        source: this,
+        type: type,
+        query: this.pattern,
+        phraseSearch: true,
+        caseSensitive: this.caseSensitive.checked,
+        entireWord: this.wholeWordSearch.checked,
+        highlightAll: true,
+        findPrevious: findPrev,
+      });
+    },
     dispatchEvent: function(type, findPrev) {
       this.findController.executeCommand('find' + type, {
-        source: this,
+        // source: this,
         type: type,
         query: this.pattern,//this.findField.value,
         phraseSearch: true,
         caseSensitive: this.caseSensitive.checked,
-        entireWord: false, //this.entireWord.checked,
+        entireWord: this.wholeWordSearch.checked,
         highlightAll: true, //this.highlightAll.checked,
         findPrevious: findPrev,
       });
