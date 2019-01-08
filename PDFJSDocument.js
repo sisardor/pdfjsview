@@ -8,6 +8,7 @@
     this.pages = [];
     this._thumbnails = [];
     this.pagesById = {};
+    this.textCallbacksLookup = {};
     this.docId = null;
     this.scale = 1;
     this.rotation = 0;
@@ -48,10 +49,10 @@
     }
 
 
-    exports.CoreControls.DocumentViewer.prototype.textSearch = function (fullSearch, onSearchCallback) {
-      var pattern = this.currentPattern
-      me.textSearch(pattern, fullSearch, onSearchCallback)
-    }
+    // exports.CoreControls.DocumentViewer.prototype.textSearch = function (fullSearch, onSearchCallback) {
+    //   var pattern = this.currentPattern
+    //   me.textSearch(pattern, fullSearch, onSearchCallback)
+    // }
 
     console.log(this);
   };
@@ -541,15 +542,225 @@
       tmtx.initCoordinates(1, 0, 0, -1, -bb.x1, bb.y2);
       return tmtx;
     },
-    loadTextData: function(pageIndex, onComplete) {
-      var selInfo = new XODText.SelectionInfo();
-      if (pageIndex === 1) {
-        return onComplete(selInfo)
+    'loadTextData': function(pageIndex, onComplete) {
+      var me = this;
+      if (me.pages[pageIndex].text !== null) {
+        onComplete(me.pages[pageIndex].text);
+      } else if (pageIndex in me.textCallbacksLookup) {
+        me.textCallbacksLookup[pageIndex].push(onComplete);
+      } else {
+        exports.utils.log('text', 'Load text ' + (pageIndex + 1));
+        me.pdfDocument.getPage(pageIndex + 1)
+          .then(function(pdfPage) {
+            return pdfPage.getTextContent({
+              normalizeWhitespace: true,
+              combineTextItems: true
+            });
+          })
+          .then(function(textContent) {
+            exports.utils.log('text', 'Text Received ' + pageIndex);
+
+            let c = document.getElementById("page1");
+            let ctx = c.getContext("2d");
+            let MULTIPLIER = exports.utils.getCanvasMultiplier();
+            let scale = 1//MULTIPLIER * me.pages[0].scale
+            let _scale = MULTIPLIER * me.pages[0].scale
+            let line_y = 0
+            var data_quads = []
+            var data_struct = []
+            let xod_struct = ["number_of_lines"]
+            let xod_str = ''
+            let num_of_lines = 0;
+            let number_of_words = 0;
+            let char_pos = 0;
+            for (var j = 0; j < textContent.items.length; j++) {
+              let item = textContent.items[j]
+              if (item.str.charAt(item.str.length-1) === ' ') {
+                item.str = item.str.replace(/.$/,"\n")
+              } else {
+                item.str = item.str + '\n'
+              }
+              let line_struct = ["number_of_words"]
+              if (item.str === ' ') continue
+              let transform = item.transform;
+              let x = transform[4];
+              let y = transform[5];
+              let width = item.width;
+              let height = transform[0];
+              let page = me.pages[0];
+              let p = page.matrix.mult({x,y})
+              // if (line_y !== p.y) {
+                // console.log('new line');
+                console.log(item.str);
+              xod_str += item.str;
+                // line_y = p.y
+                num_of_lines++;
+              // }
+              // line_y = p.y
+              let str = item.str;
+              var quad = me._get_quad(x, p.y, width * scale, height, scale)
+              // var _quad = me._get_quad(x, p.y, width * _scale, height, _scale)
+              // ctx.rect(_quad.x1, _quad.y1,  _quad.x2 - _quad.x1, _quad.y4 - _quad.y1);
+              // ctx.stroke();
+              let line_points = [11, quad.x1, quad.y4, quad.x2, quad.y2]
+              line_struct = line_struct.concat(line_points)
+              let l_len = width / item.str.length
+              let word = ''
+              let word_len = 0
+              let _word_len = 0
+              let word_x = x
+              for(let i = 0, len = item.str.length; i < len; i++) {
+                char_pos++;
+                let new_x = x + (l_len * i)
+                if (item.str[i] === ' ') { // space
+                  console.log('  ', word, word_len);
+
+                  var quad = me._get_quad(word_x, p.y, word_len, height, scale)
+                  // var _quad = me._get_quad(word_x, p.y, _word_len, height, _scale)
+                  // ctx.rect(_quad.x1, _quad.y1,  _quad.x2 - _quad.x1, _quad.y4 - _quad.y1);
+                  // ctx.stroke();
+                  var strPos = char_pos - word.length - 1
+                  var word_x_left_right = [word.length, strPos, word.length, quad.x1,quad.x2]
+                  line_struct = line_struct.concat(word_x_left_right)
+                  word = '';
+                  word_len = 0;
+                  _word_len = 0;
+                  word_x = x + (l_len * (i + 1))
+                  number_of_words++;
+                  continue
+                }
+
+                word += item.str[i]
+
+                word_len += l_len * scale
+                _word_len += l_len * _scale
+                if (len - 1 === i) { // last character
+                  console.log('  ', word, word_len);
+
+                  var quad = me._get_quad(word_x, p.y, word_len, height, scale)
+                  var strPos = char_pos - word.length
+                  var word_x_left_right = [word.length, strPos, word.length, quad.x1,quad.x2]
+                  line_struct = line_struct.concat(word_x_left_right)
+                  word = '';
+                  // var _quad = me._get_quad(word_x, p.y, _word_len, height, _scale)
+                  // ctx.rect(_quad.x1, _quad.y1,  _quad.x2 - _quad.x1, _quad.y4 - _quad.y1);
+                  // ctx.stroke();
+                  word_x = new_x
+                  word_len = 0;
+                  _word_len = 0;
+                  number_of_words++;
+                }
+
+                var quad = me._get_quad(new_x, p.y, l_len * scale, height, scale)
+                // 0: 30.493199999999998
+                // 1: 80.91402960000016
+                // 2: 48.6952575
+                // 3: 80.91402960000016
+                // 4: 48.6952575
+                // 5: 54.43830960000014
+                // 6: 30.493199999999998
+                // 7: 54.43830960000014
+                // data_quads = data_quads.concat([quad.x1,quad.y3,quad.x2,quad.y3,quad.x2, quad.y2, quad.x1, quad.y2])
+                data_quads = data_quads.concat([quad.x1, quad.y1, quad.x2, quad.y2 ,quad.x3, quad.y3, quad.x4, quad.y4])
+                // ctx.rect(quad.x1, quad.y1,  quad.x2 - quad.x1, quad.y4 - quad.y1);
+                // ctx.stroke();
+              }
+              line_struct[0] = item.str.split(' ').length;
+              xod_struct = xod_struct.concat(line_struct)
+
+            }
+            // data_quads.concat(data_quads.slice(data_quads.length - 8, data_quads.length))
+            // line_struct[0] = num_of_lines;
+            // line_struct[1] = number_of_words;
+            // var struct = [num_of_lines].concat(xod_struct)
+            xod_struct[0] = num_of_lines
+            console.log(data_quads);
+            console.log(xod_struct);
+            var xod_data = {
+              // offsets: [0, 1, 2, 3, 4, 5, 6, 7, 8, -2],
+              quads: data_quads,
+              str: xod_str,
+              struct: xod_struct
+            }
+            console.log(xod_data);
+            console.log('\n\n');
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            var selInfo = new XODText.SelectionInfo();
+            selInfo.parseFromOld({
+              m_Struct: xod_data['struct'],
+              m_Str: xod_data['str'],
+              m_Offsets: xod_data['offsets'],
+              m_Quads: xod_data['quads'],
+              m_Ready: true
+            });
+            me.correctQuadsForPageRotation(pageIndex, selInfo);
+            me.pages[pageIndex].text = selInfo;
+            me.textCallbacksLookup[pageIndex].forEach(function(completeCB) {
+              exports.utils.log('text', 'Callback ' + pageIndex);
+              completeCB(selInfo);
+            });
+            delete me.textCallbacksLookup[pageIndex];
+          })
+        me.textCallbacksLookup[pageIndex] = [onComplete];
       }
-      onComplete(selInfo)
     },
 
-
+    // 'loadTextData': function(pageIndex, onComplete) {
+    //   var me = this;
+    //
+    //   var data = {
+    //     "offsets":[0,1,2,3,4,5,6,7,8,-2],
+    //     "quads":[30.493199999999998,80.91402960000016,48.6952575,80.91402960000016,48.6952575,54.43830960000014,30.493199999999998,54.43830960000014,48.011301399999994,80.91402960000016,60.013627799999995,80.91402960000016,60.013627799999995,54.43830960000014,48.011301399999994,54.43830960000014,60.013627799999995,80.91402960000016,71.9497649,80.91402960000016,71.9497649,54.43830960000014,60.013627799999995,54.43830960000014,71.94976489999999,80.91402960000016,86.1363382,80.91402960000016,86.1363382,54.43830960000014,71.94976489999999,54.43830960000014,86.1363382,80.91402960000016,91.5859239,80.91402960000016,91.5859239,54.43830960000014,86.1363382,54.43830960000014,91.5859239,80.91402960000016,103.5882503,80.91402960000016,103.5882503,54.43830960000014,91.5859239,54.43830960000014,103.4779348,80.91402960000016,120.8195314,80.91402960000016,120.8195314,54.43830960000014,103.4779348,54.43830960000014,120.4885849,80.91402960000016,132.49091130000002,80.91402960000016,132.49091130000002,54.43830960000014,120.4885849,54.43830960000014,132.49091130000002,80.91402960000016,140.0364915,80.91402960000016,140.0364915,54.43830960000014,132.49091130000002,54.43830960000014,132.49091130000002,80.91402960000016,140.0364915,80.91402960000016,140.0364915,54.43830960000014,132.49091130000002,54.43830960000014],
+    //     "str":"WebViewer\n",
+    //     "struct":[1,1,11,30.493199999999998,80.91402960000016,140.0364915,54.43830960000014,9,0,9,30.493199999999998,140.0364915]
+    //   }
+    //
+    //   exports.utils.log('text', 'Text Received ' + pageIndex);
+    //   var selInfo = new XODText.SelectionInfo();
+    //   selInfo.parseFromOld({
+    //     m_Struct: data['struct'],
+    //     m_Str: data['str'],
+    //     m_Offsets: data['offsets'],
+    //     m_Quads: data['quads'],
+    //     m_Ready: true
+    //   });
+    //   me.correctQuadsForPageRotation(pageIndex, selInfo);
+    //   me.pages[pageIndex].text = selInfo;
+    //   onComplete(selInfo)
+    // },
+    _get_quad: function(x, y, width, height, scale) {
+      var x1 = x * scale
+      var y1 = (y - height) * scale
+      var x2 = x1 + width
+      var y2 = y1
+      var x3 = x2
+      var y3 = y1 + height * scale
+      var x4 = x1
+      var y4 = y3
+      return { x1, y1, x2, y2, x3, y3, x4, y4  }
+    },
     _getXYDest: function(pageNumber, destArray) {
       if (!this.pdfDocument) {
         return;
@@ -668,6 +879,7 @@
       return new exports.PDFJSTextLayerBuilder({
         textLayerDiv: textLayerDiv,
         eventBus: this.eventBus,
+        doc: this,
         pageIndex: pageIndex,
         viewport: viewport,
         findController: this.findController,

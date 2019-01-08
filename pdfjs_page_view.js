@@ -53,11 +53,11 @@
   };
 
   PDFJSPageView.prototype = $.extend(Object.create(exports.PageInfo.prototype), {
-    setDocumentViewer: function(docViewer) {
-      this._documentViewer = docViewer;
-      docViewer.toolModeMap.AnnotationEdit = new function () {}
-      docViewer.tool = new function () {}
-    },
+    // setDocumentViewer: function(docViewer) {
+    //   this._documentViewer = docViewer;
+    //   docViewer.toolModeMap.AnnotationEdit = new function () {}
+    //   docViewer.tool = new function () {}
+    // },
     setPdfPage: function setPdfPage(pdfPage) {
       this.pdfPage = pdfPage;
       this.pdfPageRotate = pdfPage.rotate;

@@ -449,7 +449,8 @@
               // _this2._viewport = pdfPage.getViewport(1);
               cach = pdfPage
               return pdfPage.getTextContent({
-                // normalizeWhitespace: true
+                normalizeWhitespace: true,
+                combineTextItems: true
               });
             })
             .then(function(textContent) {

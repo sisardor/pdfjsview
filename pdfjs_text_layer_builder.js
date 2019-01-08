@@ -251,7 +251,7 @@
       if (prevEnd) {
         appendTextToDiv(prevEnd.divIdx, prevEnd.offset, infinity.offset);
       }
-      return
+
       if (this.pageNumber === 1 && this.flag1 === false) {
         this.flag1 = true
         // var me = this
@@ -281,8 +281,14 @@
         let c = document.getElementById("page1");
         let ctx = c.getContext("2d");
         let MULTIPLIER = exports.utils.getCanvasMultiplier();
-        let scale = MULTIPLIER * this.doc.scale
+        let scale = 1//MULTIPLIER * this.doc.scale
         let line_y = 0
+        var data_quads = []
+        var data_struct = []
+        let line_struct = ["num_of_lines", "number_of_words", 11]
+        let xod_str = ''
+        let num_of_lines = 0;
+        let number_of_words = 0;
         for (var j = 0; j < textContent.items.length; j++) {
           let item = textContent.items[j]
           // console.log(item);
@@ -297,12 +303,17 @@
           if (line_y !== p.y) {
             // console.log('new line');
             console.log(item.str);
+            xod_str += item.str + '\n';
             line_y = p.y
+            num_of_lines++;
           }
           line_y = p.y
           let str = item.str;
-          // ctx.rect(x * scale, (p.y - height) * scale,  width * scale, height * scale);
-          // ctx.stroke();
+          var quad = this.get_quad(x, p.y, width * scale, height, scale)
+          ctx.rect(quad.x1, quad.y1,  quad.x2 - quad.x1, quad.y4 - quad.y1);
+          ctx.stroke();
+          let line_points = [quad.x1, quad.y4, quad.x2, quad.y2]
+          line_struct = line_struct.concat(line_points)
           let l_len = width / item.str.length
           let word = ''
           let word_len = 0
@@ -312,12 +323,11 @@
             if (item.str[i] === ' ') {
               console.log('  ', word, word_len);
               word = '';
-
-              ctx.rect(word_x * scale, (p.y - height) * scale,  word_len, height * scale);
+              var quad = this.get_quad(word_x, p.y, word_len, height, scale)
+              ctx.rect(quad.x1, quad.y1,  quad.x2 - quad.x1, quad.y4 - quad.y1);
               ctx.stroke();
               word_len = 0;
-              word_x = new_x
-
+              word_x = x + (l_len * (i + 1))
               continue
             }
 
@@ -326,24 +336,47 @@
             if (len - 1 === i) {
               console.log('  ', word, word_len);
               word = '';
-
-              // ctx.rect(word_x * scale, (p.y - height) * scale,  word_len, height * scale);
-              // ctx.stroke();
+              var quad = this.get_quad(word_x, p.y, word_len, height, scale)
+              var word_x_left_right = [i, 0, i, quad.x1,quad.x2]
+              line_struct = line_struct.concat(word_x_left_right)
+              ctx.rect(quad.x1, quad.y1,  quad.x2 - quad.x1, quad.y4 - quad.y1);
+              ctx.stroke();
               word_x = new_x
               word_len = 0;
+              number_of_words++;
             }
-            // console.log(item.str[i], p.y);
-            // let _i = i > 0 ?  i : 1
 
-            let descent = 11//textContent.styles[item.fontName].descent * -1
-            // ctx.rect(new_x * scale, (p.y - height) * scale,  l_len * scale, height * scale);
+            var quad = this.get_quad(new_x, p.y, l_len * scale, height, scale)
+            data_quads = data_quads.concat([quad.x1, quad.y1, quad.x2, quad.y2 ,quad.x3, quad.y3, quad.x4, quad.y4])
+            // ctx.rect(quad.x1, quad.y1,  quad.x2 - quad.x1, quad.y4 - quad.y1);
             // ctx.stroke();
           }
           console.log('---------------------------', this.pageNumber);
 
         }
+        line_struct[0] = num_of_lines;
+        line_struct[1] = number_of_words;
+        console.log(data_quads);
+        console.log(line_struct);
+        var xod_data = {
+          quad: data_quads,
+          str: xod_str,
+          struct: line_struct
+        }
+        console.log(xod_data);
         console.log('\n\n');
       }
+    },
+    get_quad: function(x, y, width, height, scale) {
+      var x1 = x * scale
+      var y1 = (y - height) * scale
+      var x2 = x1 + width
+      var y2 = y1
+      var x3 = x2
+      var y3 = y1 + height * scale
+      var x4 = x1
+      var y4 = y3
+      return { x1, y1, x2, y2, x3, y3, x4, y4  }
     },
 
     _updateMatches: function _updateMatches() {

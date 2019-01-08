@@ -18,7 +18,7 @@
     this.pdfPage = pdfPage;
     this.linkService = linkService;
     this.downloadManager = downloadManager;
-    this.imageResourcesPath = '../pdfjs/images/';
+    this.imageResourcesPath = 'external/pdfjs/images/';
     this.renderInteractiveForms = renderInteractiveForms;
 
     this.div = null;
@@ -53,7 +53,7 @@
           return;
         }
 
-        var pageDiv = CoreControls.CanvasManager.getWidgetContainerParent(_this.pdfPage.pageIndex);
+        var pageDiv = _this.getWidgetContainerParent(_this.pdfPage.pageIndex);
         if (pageDiv.length) {
           var div = document.createElement('div');
           div.className = 'annotationLayer';
@@ -65,7 +65,9 @@
         }
       });
     },
-
+    getWidgetContainerParent: function(pageIndex) {
+      return $('#pageContainer' + pageIndex);
+    },
     cancel: function cancel() {
       this._cancelled = true;
     },
