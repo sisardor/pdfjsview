@@ -22,10 +22,10 @@
     overflow: hidden;
     opacity: 0.2;
     line-height: 1.0;
-    user-select: text;
+    /* user-select: text;
     -moz-user-select: text;
     -webkit-user-select: text;
-    -ms-user-select: text;
+    -ms-user-select: text; */
     z-index: 40;
   }
 
@@ -36,10 +36,10 @@
     white-space: pre;
     cursor: text;
     transform-origin: 0% 0%;
-    user-select: text;
+    /* user-select: text;
     -moz-user-select: text;
     -webkit-user-select: text;
-    -ms-user-select: text;
+    -ms-user-select: text; */
   }
 
   .textLayer .highlight {

@@ -574,11 +574,13 @@
             let number_of_words = 0;
             let char_pos = 0;
             let page = me.pages[0];
-
+            let line_count = 0;
             for (var j = 0; j < textContent.items.length; j++) {
               let item = textContent.items[j]
               let transform = item.transform;
               let xline = item.str
+              if (xline === ' ') continue;
+              line_count++;
               if (xline.charAt(xline.length-1) === ' ') {
                 xline = xline.replace(/.$/,"\n")
               } else {
@@ -607,10 +609,10 @@
               let _4 = line_quad.y3;
               let _5 = line_quad.x2;
               let _6 = line_quad.y1;
-              console.log('l',[_1, _2, _3, _4, _5, _6]);
+              // console.log('l',[_1, _2, _3, _4, _5, _6]);
               data_struct = data_struct.concat([_1, _2, _3, _4, _5, _6])
               let aWord = '';
-              for(let i = 0, len = xline.length - 1; i < len; i++) {
+              for(let i = 0, len = xline.length; i < len; i++) {
                 char_pos++;
 
                 let char_x = x + (char_length * i)
@@ -625,30 +627,46 @@
                 // console.log(xline[i],char_pos,  q[0], q[1]);
                 xWord += xline[i]
                 aWord += xline[i]
-                if (xline[i] === ' ' || xline[i + 1] === "\n") {
-                  aWord = aWord.trim()
+                if (xline[i] === ' ') {
+                  // aWord = aWord.trim()
                   // console.log(xWord, '|', aWord, char_x, char_quad.x2);
 
                   let _0 = aWord.length
                   let _1 = char_pos - aWord.length;
                   let _2 = aWord.length
                   // let _3 = char_pos - (char_length  * aWord.length);
-                  let _3 = char_quad.x2 - (char_length  * aWord.length);
+                  let _3 = char_quad.x1 - (char_length  * aWord.length);
                   let _4 = char_quad.x2;
-                  console.log('w', [_0, _1, _2, _3, _4]);
-                  data_struct = data_struct.concat([_0, _1, _2, _3, _4])
+                  var point = [_0, _1, _2, _3, _4]
+                  // console.log(aWord, point);
+                  data_struct = data_struct.concat(point)
+                  aWord = ''
+                } else if (xline[i] === '\n') {
+
+                  // aWord = aWord.trim()
+                  // console.log(xWord, '|', aWord, char_x, char_quad.x2);
+
+                  let _0 = aWord.length - 1
+                  let _1 = char_pos - aWord.length;
+                  let _2 = aWord.length - 1
+                  // let _3 = char_pos - (char_length  * aWord.length);
+                  let _3 = char_quad.x1 - (char_length  * aWord.length);
+                  let _4 = char_quad.x2;
+                  var point = [_0, _1, _2, _3, _4]
+                  // console.log(aWord, point);
+                  data_struct = data_struct.concat(point)
                   aWord = ''
                 }
 
-                if (xline[i + 1] === "\n") {
-                  var newline_quad = me._get_quad(char_x, p.y, 0, height, scale)
-                  var q = [newline_quad.x1, newline_quad.y1, newline_quad.x2, newline_quad.y2 ,newline_quad.x3, newline_quad.y3, newline_quad.x4, newline_quad.y4]
-                  data_quads = data_quads.concat(q)
-                  // me._debug_ctx(ctx, _scale, newline_quad, char_length, height)
-                  // console.log("\\n", char_pos,  q[0], q[1]);
-                  // xWord += xline[i + 1]
-                  continue
-                }
+                // if (xline[i + 1] === "\n") {
+                //   var newline_quad = me._get_quad(char_x, p.y, 0, height, scale)
+                //   var q = [newline_quad.x1, newline_quad.y1, newline_quad.x2, newline_quad.y2 ,newline_quad.x3, newline_quad.y3, newline_quad.x4, newline_quad.y4]
+                //   data_quads = data_quads.concat(q)
+                //   // me._debug_ctx(ctx, _scale, newline_quad, char_length, height)
+                //   // console.log("\\n", char_pos,  q[0], q[1]);
+                //   // xWord += xline[i + 1]
+                //   continue
+                // }
 
               }
 
@@ -664,7 +682,7 @@
 
               // me._debug_ctx(ctx, _scale, line_quad, width, height)
             }
-            data_struct = [textContent.items.length].concat(data_struct)
+            data_struct = [line_count].concat(data_struct)
             // console.log(xod_str);
             // console.log(data_quads);
             // console.log(data_struct);
@@ -865,13 +883,15 @@
     //   onComplete(selInfo)
     // },
     _get_quad: function(x, y, width, height, scale) {
+
       var x1 = x * scale
       var y1 = (y - height) * scale
       var x2 = x1 + width
       var y2 = y1
       var x3 = x2
-      var y3 = y1 + height * scale
-      var x4 = x1
+      var _height = height * 0.3
+      var y3 = (y1 + height * scale) + _height
+      var x4 = x1 + _height
       var y4 = y3
       return { x1, y1, x2, y2, x3, y3, x4, y4  }
     },

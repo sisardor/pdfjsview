@@ -251,7 +251,7 @@
       if (prevEnd) {
         appendTextToDiv(prevEnd.divIdx, prevEnd.offset, infinity.offset);
       }
-
+      return
       if (this.pageNumber === 1 && this.flag1 === false) {
         this.flag1 = true
         // var me = this
