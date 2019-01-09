@@ -560,8 +560,8 @@
           .then(function(textContent) {
             exports.utils.log('text', 'Text Received ' + pageIndex);
 
-            let c = document.getElementById("page1");
-            let ctx = c.getContext("2d");
+            // let c = document.getElementById("page1");
+            // let ctx = c.getContext("2d");
             let MULTIPLIER = exports.utils.getCanvasMultiplier();
             let scale = 1//MULTIPLIER * me.pages[0].scale
             let _scale = MULTIPLIER * me.pages[0].scale
@@ -630,13 +630,14 @@
                 if (xline[i] === ' ') {
                   // aWord = aWord.trim()
                   // console.log(xWord, '|', aWord, char_x, char_quad.x2);
+                  var offset = (aWord.length - 1 === 0) ? 0 : 1
 
-                  let _0 = aWord.length
+                  let _0 = aWord.length - offset;
                   let _1 = char_pos - aWord.length;
-                  let _2 = aWord.length
+                  let _2 = aWord.length - offset;
                   // let _3 = char_pos - (char_length  * aWord.length);
-                  let _3 = char_quad.x1 - (char_length  * aWord.length);
-                  let _4 = char_quad.x2;
+                  let _3 = char_quad.x1 - (char_length  * (aWord.length - offset));
+                  let _4 = char_quad.x2 - char_length;
                   var point = [_0, _1, _2, _3, _4]
                   // console.log(aWord, point);
                   data_struct = data_struct.concat(point)
@@ -645,13 +646,13 @@
 
                   // aWord = aWord.trim()
                   // console.log(xWord, '|', aWord, char_x, char_quad.x2);
-
-                  let _0 = aWord.length - 1
+                  var offset = (aWord.length - 1 === 0) ? 0 : 1
+                  let _0 = aWord.length - offset
                   let _1 = char_pos - aWord.length;
-                  let _2 = aWord.length - 1
+                  let _2 = aWord.length - offset
                   // let _3 = char_pos - (char_length  * aWord.length);
-                  let _3 = char_quad.x1 - (char_length  * aWord.length);
-                  let _4 = char_quad.x2;
+                  let _3 = char_quad.x1 - (char_length  * (aWord.length - offset));
+                  let _4 = char_quad.x2 - char_length;
                   var point = [_0, _1, _2, _3, _4]
                   // console.log(aWord, point);
                   data_struct = data_struct.concat(point)
@@ -889,7 +890,7 @@
       var x2 = x1 + width
       var y2 = y1
       var x3 = x2
-      var _height = height * 0.3
+      var _height = height * 0.23
       var y3 = (y1 + height * scale) + _height
       var x4 = x1 + _height
       var y4 = y3
