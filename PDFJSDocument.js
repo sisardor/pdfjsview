@@ -303,7 +303,7 @@
                   scale: me.scale,
                   renderingQueue: me.renderingQueue,
                   defaultViewport: viewport.clone(),
-                  annotationLayerFactory: me,
+                  // annotationLayerFactory: me,
                   textLayerFactory: me,
                   textLayerMode: me.textLayerMode,
                   eventBus: me.eventBus
@@ -573,13 +573,135 @@
             let num_of_lines = 0;
             let number_of_words = 0;
             let char_pos = 0;
+            let page = me.pages[0];
+
             for (var j = 0; j < textContent.items.length; j++) {
               let item = textContent.items[j]
-              if (item.str.charAt(item.str.length-1) === ' ') {
-                item.str = item.str.replace(/.$/,"\n")
+              let transform = item.transform;
+              let xline = item.str
+              if (xline.charAt(xline.length-1) === ' ') {
+                xline = xline.replace(/.$/,"\n")
               } else {
-                item.str = item.str + '\n'
+                xline = xline + '\n'
               }
+              let line_struct = []
+
+              let x = transform[4];
+              let y = transform[5];
+              let width = item.width;
+              let height = transform[0];
+              let p = page.matrix.mult({x,y})
+              xod_str += xline
+
+              let char_length = width / (xline.length - 1)
+              let line_quad = me._get_quad(x, p.y, width * scale, height, scale)
+
+              let xWord = ''
+              let words = xline.split(' ')
+              // console.log(words);
+
+              let _0 = 0;
+              let _1 = xline.split(' ').length;
+              let _2 = xline.length;
+              let _3 = line_quad.x1;
+              let _4 = line_quad.y3;
+              let _5 = line_quad.x2;
+              let _6 = line_quad.y1;
+              console.log('l',[_1, _2, _3, _4, _5, _6]);
+              data_struct = data_struct.concat([_1, _2, _3, _4, _5, _6])
+              let aWord = '';
+              for(let i = 0, len = xline.length - 1; i < len; i++) {
+                char_pos++;
+
+                let char_x = x + (char_length * i)
+                var char_quad = me._get_quad(char_x, p.y, char_length, height, scale)
+                // if (xline[i] !== ' ') {
+                  var q = [char_quad.x1, char_quad.y1, char_quad.x2, char_quad.y2 ,char_quad.x3, char_quad.y3, char_quad.x4, char_quad.y4]
+                  data_quads = data_quads.concat(q)
+                  // me._debug_ctx(ctx, _scale, char_quad, char_length, height)
+                // }
+
+
+                // console.log(xline[i],char_pos,  q[0], q[1]);
+                xWord += xline[i]
+                aWord += xline[i]
+                if (xline[i] === ' ' || xline[i + 1] === "\n") {
+                  aWord = aWord.trim()
+                  // console.log(xWord, '|', aWord, char_x, char_quad.x2);
+
+                  let _0 = aWord.length
+                  let _1 = char_pos - aWord.length;
+                  let _2 = aWord.length
+                  // let _3 = char_pos - (char_length  * aWord.length);
+                  let _3 = char_quad.x2 - (char_length  * aWord.length);
+                  let _4 = char_quad.x2;
+                  console.log('w', [_0, _1, _2, _3, _4]);
+                  data_struct = data_struct.concat([_0, _1, _2, _3, _4])
+                  aWord = ''
+                }
+
+                if (xline[i + 1] === "\n") {
+                  var newline_quad = me._get_quad(char_x, p.y, 0, height, scale)
+                  var q = [newline_quad.x1, newline_quad.y1, newline_quad.x2, newline_quad.y2 ,newline_quad.x3, newline_quad.y3, newline_quad.x4, newline_quad.y4]
+                  data_quads = data_quads.concat(q)
+                  // me._debug_ctx(ctx, _scale, newline_quad, char_length, height)
+                  // console.log("\\n", char_pos,  q[0], q[1]);
+                  // xWord += xline[i + 1]
+                  continue
+                }
+
+              }
+
+              // console.log(xWord + '   x:' + line_quad.x1 + ', y:' +line_quad.y1 + ', width:' + width + ', height:' + height);
+              // let strPos = char_pos;
+              // let strLen = xWord.length;
+                // let _0 = xWord.length
+                // let _1 = char_pos;
+                // let _2 = xWord.length
+                // let _3 =;
+                // let _4 =;
+              // console.log(xWord, strPos, strLen);
+
+              // me._debug_ctx(ctx, _scale, line_quad, width, height)
+            }
+            data_struct = [textContent.items.length].concat(data_struct)
+            // console.log(xod_str);
+            // console.log(data_quads);
+            // console.log(data_struct);
+            var xod_data = {
+              offsets: [],// [0, 1, 2, 3, 4, 5, 6, 7, 8, -2],
+              quads: data_quads,
+              str: xod_str,
+              struct: data_struct
+            }
+            console.log(xod_data);
+            var selInfo = new XODText.SelectionInfo();
+            selInfo.parseFromOld({
+              m_Struct: xod_data['struct'],
+              m_Str: xod_data['str'],
+              m_Offsets: xod_data['offsets'],
+              m_Quads: xod_data['quads'],
+              m_Ready: true
+            });
+            me.correctQuadsForPageRotation(pageIndex, selInfo);
+            me.pages[pageIndex].text = selInfo;
+            me.textCallbacksLookup[pageIndex].forEach(function(completeCB) {
+              exports.utils.log('text', 'Callback ' + pageIndex);
+              completeCB(selInfo);
+            });
+            delete me.textCallbacksLookup[pageIndex];
+            return
+
+
+
+
+
+
+
+
+
+
+            for (var j = 0; j < textContent.items.length; j++) {
               let line_struct = ["number_of_words"]
               if (item.str === ' ') continue
               let transform = item.transform;
@@ -652,15 +774,7 @@
                 }
 
                 var quad = me._get_quad(new_x, p.y, l_len * scale, height, scale)
-                // 0: 30.493199999999998
-                // 1: 80.91402960000016
-                // 2: 48.6952575
-                // 3: 80.91402960000016
-                // 4: 48.6952575
-                // 5: 54.43830960000014
-                // 6: 30.493199999999998
-                // 7: 54.43830960000014
-                // data_quads = data_quads.concat([quad.x1,quad.y3,quad.x2,quad.y3,quad.x2, quad.y2, quad.x1, quad.y2])
+
                 data_quads = data_quads.concat([quad.x1, quad.y1, quad.x2, quad.y2 ,quad.x3, quad.y3, quad.x4, quad.y4])
                 // ctx.rect(quad.x1, quad.y1,  quad.x2 - quad.x1, quad.y4 - quad.y1);
                 // ctx.stroke();
@@ -760,6 +874,10 @@
       var x4 = x1
       var y4 = y3
       return { x1, y1, x2, y2, x3, y3, x4, y4  }
+    },
+    _debug_ctx: function (ctx, _scale, line_quad, width, height) {
+      ctx.rect(line_quad.x1 * _scale, line_quad.y1* _scale,  width* _scale, height* _scale);
+      ctx.stroke();
     },
     _getXYDest: function(pageNumber, destArray) {
       if (!this.pdfDocument) {
