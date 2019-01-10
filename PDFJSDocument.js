@@ -593,13 +593,26 @@
                 }
                 return el != null;
               });
+              if (font.data.cMap) {
+                font.data.toUnicode._map.filter(function (el, i) {
+                  if (el != null) {
+                  	unicodeMap[el] = i;
+                  }
+                  return el != null;
+                });
+              }
+              // me.calculate_space_width(item, font, page)
+              // continue;
+
+
+
               let fontMatrix = (font.data.fontMatrix) ? font.data.fontMatrix : [0.001]
               let _transform = item.transform;
               let xline = item.str
-              if (xline === ' ') continue;
+              // if (xline === ' ') continue;
               line_count++;
               if (xline.charAt(xline.length-1) === ' ') {
-                xline = xline.replace(/.$/,"\n")
+                xline = xline + '\n' //xline.replace(/.$/,"\n")
               } else {
                 xline = xline + '\n'
               }
@@ -620,25 +633,44 @@
               let transform = item.transform.concat()
               let word_quads = []
               let w_quad = []
+              let space_width = me.calculate_space_width(item, font, page)
               for(let i = 0, len = xline.length; i < len; i++) {
                 char_pos++;
                 xWord += xline[i]
                 aWord += xline[i]
+                var charWidth, charcode, widthCode;
+                if (font.data.cMap) {
+                  charcode = unicodeMap[xline.charAt(i)]
+                } else {
+                  charcode = xline.charCodeAt(i);
+                }
+
+                widthCode = charcode;
+
+                charWidth = font.data.widths[widthCode]
+                charWidth = isNum(charWidth) ? charWidth : 1000
+
+
                 // if (xline[i] !== '\n') {
-                  var glyphWidth = font.data.widths[unicodeMap[xline.charAt(i)]]
-                  if (!glyphWidth && xline.charAt(i) === ' ') {
-                    glyphWidth = font.data.widths[xline.charCodeAt(i)]
-                  }
-                  else if (!glyphWidth) {
-                    glyphWidth = unnormalUnicode[xline.charAt(i)]
-                  }
+                  // var glyphWidth = font.data.widths[unicodeMap[xline.charAt(i)]]
+                  // if (!glyphWidth && xline.charAt(i) === ' ') {
+                  //   glyphWidth = font.data.widths[xline.charCodeAt(i)]
+                  // }
+                  // else if (!glyphWidth) {
+                  //   glyphWidth = unnormalUnicode[xline.charAt(i)]
+                  // }
                   var charSpacing = 0;
                   var textState = {fontSize: 1, textHScale:1 }
-                  var w0 = glyphWidth * fontMatrix[0];
+                  var w0 = charWidth * fontMatrix[0];
                   var tx = (w0 * textState.fontSize + charSpacing) *  textState.textHScale;
+
                   // transform[4] = transform[0] * tx + transform[2] * 0 + transform[4]
 
                   char_length = transform[0] * tx
+                  if (tx === 0 ){
+
+                    char_length = space_width
+                  }
                 // }
                 let char_x = transform[4]//x + (char_length * i)
                 // console.log(xline[i], char_length, transform);
@@ -687,22 +719,7 @@
                   w_quad = []
                 }
 
-                // if (xline[i] !== '\n') {
-                  transform[4] = transform[0] * tx + transform[2] * 0 + transform[4]
-                // }
-
-
-
-                // if (xline[i + 1] === "\n") {
-                //   var newline_quad = me._get_quad(char_x, p.y, 0, height, scale)
-                //   var q = [newline_quad.x1, newline_quad.y1, newline_quad.x2, newline_quad.y2 ,newline_quad.x3, newline_quad.y3, newline_quad.x4, newline_quad.y4]
-                //   data_quads = data_quads.concat(q)
-                //   // me._debug_ctx(ctx, _scale, newline_quad, char_length, height)
-                //   // console.log("\\n", char_pos,  q[0], q[1]);
-                //   // xWord += xline[i + 1]
-                //   continue
-                // }
-
+                transform[4] = char_length + transform[2] * 0 + transform[4]
               }
               // console.log(word_structs);
               let line_quad = me._get_quad(x, p.y, width, height)
@@ -749,6 +766,98 @@
         me.textCallbacksLookup[pageIndex] = [onComplete];
       }
     },
+    calculate_space_width: function(item, font, page){
+      if (!/\s/.test(item.str)) {
+        return 0;
+      }
+      let x = item.transform[4];
+      let y = item.transform[5];
+      let width = item.width;
+      let height = item.transform[0];
+      let transform = item.transform.concat()
+      let fontMatrix = (font.data.fontMatrix) ? font.data.fontMatrix : [0.001]
+      let tranformed_xy = page.matrix.mult({x,y})
+      y = tranformed_xy.y
+      let str = item.str;
+      let isSpaceOccured = false;
+      let cMapSpaceWidth = 0;
+      var unicodeMap = {}
+      if (font.data.cMap) {
+        font.data.toUnicode._map.filter(function (el, i) {
+          if (el != null) {
+          	unicodeMap[el] = i;
+          }
+          return el != null;
+        });
+      }
+      for(let i = 0, len = str.length; i < len; i++) {
+        let widthCode, charWidth, charcode;
+        if (font.data.cMap) {
+          charcode = unicodeMap[str.charAt(i)];
+        } else {
+          charcode = str.charCodeAt(i);
+        }
+        widthCode = charcode;
+
+        charWidth = font.data.widths[widthCode]
+        charWidth = isNum(charWidth) ? charWidth : 1000
+        if (!font.data.cMap && charcode === 32 && charWidth !== 0) {
+          charWidth = 0;
+        }
+
+
+        let charSpacing = 0;
+        let textState = {fontSize: 1, textHScale:1 }
+        let w0 = charWidth * fontMatrix[0];
+        let tx = (w0 * textState.fontSize + charSpacing) *  textState.textHScale;
+        let char_length = transform[0] * tx
+
+        transform[4] = char_length + transform[2] * 0 + transform[4]
+
+        if (!font.data.cMap && charcode === 32) {
+          isSpaceOccured = true;
+        } else if(font.data.cMap && str.charAt(i) === ' ') {
+          isSpaceOccured = true;
+          cMapSpaceWidth = char_length;
+          break;
+        }
+        // console.log(str.charAt(i),charcode, char_length);
+      }
+      let originalWidth = item.width + item.transform[4]
+      let newWidth = transform[4]
+      let calculatedWidth = (originalWidth - newWidth) / (str.split(' ').length - 1)
+      if (!isSpaceOccured) {
+        calculatedWidth = 0;
+      }
+      if (font.data.cMap && isSpaceOccured) {
+        calculatedWidth = cMapSpaceWidth
+      }
+      // console.log(item.transform, "width: ", originalWidth)
+      // console.log(transform, 'width: ', newWidth);
+      // // console.log(originalWidth, newWidth);
+      // console.log(str);
+      // console.log('Calculated width', calculatedWidth);
+      // console.log('\n--------------------------');
+      return calculatedWidth
+    },
+    charsToGlyphs: function(chars) {
+      var charsCashe = this.charsCache
+      var glyphs, glyph, charcode;
+
+      // if we translated this string before, just grab it from the cache
+      if (charsCache) {
+        glyphs = charsCache[chars];
+        if (glyphs) {
+          return glyphs;
+        }
+      }
+
+      // lazily create the translation cache
+      if (!charsCache) {
+        charsCache = this.charsCache = Object.create(null);
+      }
+
+    },
     _map_font_data: function (_objs) {
       var fonts = {}
       for (var key in _objs) {
@@ -780,14 +889,14 @@
     //   onComplete(selInfo)
     // },
     _get_quad: function(x, y, width, height, scale) {
-
+      var extraButtomSpace = height * 0.23
       var x1 = x
       var y1 = (y - height)
       var x2 = x1 + width
       var y2 = y1
       var x3 = x2
-      var y3 = (y1 + height)
-      var x4 = x1
+      var y3 = (y1 + height) + extraButtomSpace
+      var x4 = x1 + extraButtomSpace
       var y4 = y3
       return { x1, y1, x2, y2, x3, y3, x4, y4  }
     },
@@ -963,6 +1072,9 @@
     }
   });
 
+  function isNum(v) {
+    return typeof v === 'number';
+  }
 
   var RenderingStates = {
     INITIAL: 0,
