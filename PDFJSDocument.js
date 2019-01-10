@@ -625,7 +625,17 @@
                 xWord += xline[i]
                 aWord += xline[i]
                 // if (xline[i] !== '\n') {
-                  var glyphWidth = font.data.widths[unicodeMap[xline.charAt(i)]]
+                  var glyphWidth;
+                  if (font.data.wideChars) {
+                    glyphWidth = font.data.widths[unicodeMap[xline.charAt(i)]]
+                  } else {
+                    glyphWidth = font.data.widths[xline.charCodeAt(i)]
+                  }
+                  if (xline.charAt(i) === ' ') {
+                    var spaceWidth = 500 / 1000 * char_length;
+                    glyphWidth = 190
+                  }
+
                   if (!glyphWidth && xline.charAt(i) === ' ') {
                     glyphWidth = font.data.widths[xline.charCodeAt(i)]
                   }
@@ -667,7 +677,8 @@
                   console.log(aWord, w_struct);
                   word_structs = word_structs.concat(w_struct)
                   aWord = ''
-                  data_quads = data_quads.concat(w_quad)
+                  var start = 0, end = p0 * 8;
+                  data_quads = data_quads.concat(w_quad.slice(start, end))
                   w_quad = []
                 } else if (xline[i] === '\n') {
 
@@ -683,7 +694,8 @@
                   console.log(aWord, w_struct);
                   word_structs = word_structs.concat(w_struct)
                   aWord = ''
-                  data_quads = data_quads.concat(w_quad)
+                  var start = 0, end = p0 * 8;
+                  data_quads = data_quads.concat(w_quad.slice(start, end))
                   w_quad = []
                 }
 
@@ -711,10 +723,12 @@
               let _2 = xline.length;
               let _3 = line_quad.x1;
               let _4 = line_quad.y3;
-              let _5 = line_quad.x2;
+              let _5 = word_structs[word_structs.length-1]//line_quad.x2;
               let _6 = line_quad.y1;
               let l_struct = [_1, _2, _3, _4, _5, _6];
               line_structs = line_structs.concat(l_struct).concat(word_structs)//data_struct.concat([_1, _2, _3, _4, _5, _6])
+              console.log(xline, l_struct);
+              console.log('\n');
             }
 
             var data_struct = [line_count].concat(line_structs)
