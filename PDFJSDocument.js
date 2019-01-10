@@ -564,7 +564,8 @@
             console.log(pdfPageCache);
             var unnormalUnicode = {
               'f': 317,
-              'i': 240
+              'i': 240,
+              '\n': 0
             }
             // let c = document.getElementById("page1");
             // let ctx = c.getContext("2d");
@@ -573,7 +574,7 @@
             let _scale = MULTIPLIER * me.pages[0].scale
             let line_y = 0
             var data_quads = []
-            var data_struct = []
+            var line_structs = []
             let xod_struct = ["number_of_lines"]
             let xod_str = ''
             let num_of_lines = 0;
@@ -612,21 +613,18 @@
               xod_str += xline
 
               let char_length = width / (xline.length - 1)
-              let line_quad = me._get_quad(x, p.y, width * scale, height, scale)
 
               let xWord = ''
-              let words = xline.split(' ')
-              // console.log(words);
-
-
-              // console.log('l',[_1, _2, _3, _4, _5, _6]);
-              // data_struct = data_struct.concat([_1, _2, _3, _4, _5, _6])
-              let line_struct = []
+              let word_structs = []
               let aWord = '';
               let transform = item.transform.concat()
+              let word_quads = []
+              let w_quad = []
               for(let i = 0, len = xline.length; i < len; i++) {
                 char_pos++;
-                if (xline[i] !== '\n') {
+                xWord += xline[i]
+                aWord += xline[i]
+                // if (xline[i] !== '\n') {
                   var glyphWidth = font.data.widths[unicodeMap[xline.charAt(i)]]
                   if (!glyphWidth && xline.charAt(i) === ' ') {
                     glyphWidth = font.data.widths[xline.charCodeAt(i)]
@@ -641,52 +639,57 @@
                   // transform[4] = transform[0] * tx + transform[2] * 0 + transform[4]
 
                   char_length = transform[0] * tx
-                }
+                // }
                 let char_x = transform[4]//x + (char_length * i)
                 // console.log(xline[i], char_length, transform);
                 var char_quad = me._get_quad(char_x, p.y, char_length, height, scale)
                 var q = [char_quad.x1, char_quad.y1, char_quad.x2, char_quad.y2 ,char_quad.x3, char_quad.y3, char_quad.x4, char_quad.y4]
-                data_quads = data_quads.concat(q)
+                // data_quads = data_quads.concat(q)
+                w_quad = w_quad.concat(q)
 
 
 
                 // console.log(xline[i],char_pos,  q[0], q[1]);
-                xWord += xline[i]
-                aWord += xline[i]
+
                 if (xline[i] === ' ') {
                   // aWord = aWord.trim()
                   // console.log(xWord, '|', aWord, char_x, char_quad.x2);
                   var offset = (aWord.length - 1 === 0) ? 0 : 1
 
-                  let _0 = aWord.length - offset;
-                  let _1 = char_pos - aWord.length;
-                  let _2 = aWord.length - offset;
-                  let _3 = char_quad.x1 - (char_length  * (aWord.length - offset));
-                  let _4 = char_quad.x2 - char_length;
-                  var point = [_0, _1, _2, _3, _4]
-                  console.log(aWord, point);
-                  line_struct = line_struct.concat(point)
+                  let p0 = aWord.length - offset;
+                  let p1 = char_pos - aWord.length;
+                  let p2 = aWord.length - offset;
+                  // let p3 = char_quad.x1 - (char_length  * (aWord.length - offset));
+                  // let p4 = char_quad.x2 - char_length;
+                  let p3 = w_quad[0]//char_quad.x1 - (char_length  * (aWord.length - offset));
+                  let p4 = w_quad[w_quad.length - 1 - 7]//char_quad.x2 - char_length;
+                  var w_struct = [p0, p1, p2, p3, p4]
+                  console.log(aWord, w_struct);
+                  word_structs = word_structs.concat(w_struct)
                   aWord = ''
+                  data_quads = data_quads.concat(w_quad)
+                  w_quad = []
                 } else if (xline[i] === '\n') {
 
                   // aWord = aWord.trim()
                   // console.log(xWord, '|', aWord, char_x, char_quad.x2);
                   var offset = (aWord.length - 1 === 0) ? 0 : 1
-                  let _0 = aWord.length - offset
-                  let _1 = char_pos - aWord.length;
-                  let _2 = aWord.length - offset
-                  // let _3 = char_pos - (char_length  * aWord.length);
-                  let _3 = char_quad.x1 - (char_length  * (aWord.length - offset));
-                  let _4 = char_quad.x2 - char_length;
-                  var point = [_0, _1, _2, _3, _4]
-                  console.log(aWord, point);
-                  line_struct = line_struct.concat(point)
+                  let p0 = aWord.length - offset
+                  let p1 = char_pos - aWord.length;
+                  let p2 = aWord.length - offset
+                  let p3 = w_quad[0]//char_quad.x1 - (char_length  * (aWord.length - offset));
+                  let p4 = w_quad[w_quad.length - 1 - 7]//char_quad.x2 - char_length;
+                  var w_struct = [p0, p1, p2, p3, p4]
+                  console.log(aWord, w_struct);
+                  word_structs = word_structs.concat(w_struct)
                   aWord = ''
+                  data_quads = data_quads.concat(w_quad)
+                  w_quad = []
                 }
 
-                if (xline[i] !== '\n') {
+                // if (xline[i] !== '\n') {
                   transform[4] = transform[0] * tx + transform[2] * 0 + transform[4]
-                }
+                // }
 
 
 
@@ -701,19 +704,20 @@
                 // }
 
               }
-              // console.log(line_struct);
-
+              // console.log(word_structs);
+              let line_quad = me._get_quad(x, p.y, width, height)
               let _0 = 0;
               let _1 = xline.split(' ').length;
               let _2 = xline.length;
               let _3 = line_quad.x1;
               let _4 = line_quad.y3;
-              let _5 = transform[4];//line_quad.x2;
+              let _5 = line_quad.x2;
               let _6 = line_quad.y1;
-              data_struct = data_struct.concat([_1, _2, _3, _4, _5, _6]).concat(line_struct)//data_struct.concat([_1, _2, _3, _4, _5, _6])
+              let l_struct = [_1, _2, _3, _4, _5, _6];
+              line_structs = line_structs.concat(l_struct).concat(word_structs)//data_struct.concat([_1, _2, _3, _4, _5, _6])
             }
 
-            data_struct = [line_count].concat(data_struct)
+            var data_struct = [line_count].concat(line_structs)
             // console.log(xod_str);
             // console.log(data_quads);
             // console.log(data_struct);
