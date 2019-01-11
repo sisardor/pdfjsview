@@ -576,7 +576,11 @@
             let line_count = 0;
             for (let i = 0, len = textContent.items.length; i < len; i++) {
               let fontProvider = pdfjs_fonts[textContent.items[i].fontName];
-
+              let text = textContent.items[i].str
+              if (text.length === 1 && text === ' ') {
+                xod_str += text;
+                continue;
+              }
               let options = {
                 item: textContent.items[i],
                 pageMatrix: page.matrix,

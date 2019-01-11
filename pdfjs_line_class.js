@@ -20,8 +20,33 @@
 
     this.font = options.fontProvider.data;
     this._fontMatrix = (this.font.fontMatrix) ? this.font.fontMatrix : [0.001]
+
+
+
+
+    // sometimes we have luck finding here
+    let unicodeMap = {}
+    this.font.toUnicode._map.filter(function (el, i) {
+      if (el != null) {
+        unicodeMap[el] = i;
+      }
+      return el != null;
+    });
+    this._unicodeMap = unicodeMap
+
+
+
+
+
+
+
+
+
     this.glyphs = []
     let word_arr = this.textLine.split('')
+    if(word_arr[word_arr.length - 1] === " ") {
+      console.log('warn');
+    }
     let space_indexes = []
     for (let i = 0, len = word_arr.length; i < len; i++) {
       let opt = {
@@ -31,6 +56,7 @@
         toUnicode: this.font.toUnicode,
         fontMatrix: this._fontMatrix,
         lineHeight: this.height,
+        unicodeMap: this._unicodeMap,
         index: options.charCount + i
       }
       let glyph = new XGlyph(opt)
@@ -63,6 +89,9 @@
 
     this.words = []
     let words = this.textLine.split(' ');
+    if (words[words.length - 1] === '') {
+    	words = words.slice(0, words.length - 1)
+    }
     let index = 0;
     for (let i = 0, len = words.length; i < len; i++) {
       // let res = this.glyphs.slice(index, index + words[i].length )
@@ -72,6 +101,7 @@
       } else {
         word = words[i] + ' ';
       }
+      
 
       let start = index;
       let end = index + word.length;
@@ -97,7 +127,11 @@
       return this.textLine.length
     },
     get wordCount() {
-      return this.textLine.split(' ').length
+      let words = this.textLine.split(' ');
+      if (words[words.length - 1] === '') {
+      	words = words.slice(0, words.length - 1)
+      }
+      return words.length
     },
     get lineWidth() {
       return this.x + this.width
@@ -221,6 +255,7 @@
     this.index = options.index;
     let lineHeight = options.lineHeight;
     let fontMatrix = options.fontMatrix;
+    let unicodeMap = options.unicodeMap
     this.char = options.char;
     let widths = options.widths;
     let toUnicode = options.toUnicode;
@@ -233,6 +268,9 @@
       charcode = this.char.charCodeAt(0);
     }
     this.unicode = charcode;
+    if (this.unicode === -1){
+      console.log('!');
+    }
     widthCode = charcode;
 
     charWidth = widths[widthCode]
@@ -243,8 +281,16 @@
 
     this.width = charWidth;
     if (this.unicode !== 32 && this.width === 0 && this.char !== '') {
-      this.unicode = toUnicode._map.findIndex(char => char === this.char)
-      this.width = widths[this.unicode];
+      if (toUnicode._map.contains(this.char)){
+        this.unicode = toUnicode._map.findIndex(char => char === this.char)
+        this.width = widths[this.unicode];
+        if (!this.width) {
+          this.unicode = unicodeMap[this.char];
+          this.width = widths[this.unicode];
+        }
+      } else {
+        this.width = 0
+      }
     }
 
 
@@ -253,6 +299,9 @@
     let w0 = this.width * fontMatrix[0];
     let tx = (w0 * textState.fontSize + charSpacing) *  textState.textHScale;
     this.char_length = lineHeight * tx
+    if (isNaN(this.char_length)){
+      console.error('!');
+    }
   }
 
   XGlyph.prototype = {
