@@ -560,6 +560,106 @@
             });
           })
           .then(function(textContent) {
+
+
+
+
+
+
+
+
+
+
+            let page = me.pages[0];
+            let pdfjs_fonts = me._map_font_data(pdfPageCache.commonObjs._objs)
+            let xod_stucts = [], xod_quads = [], xod_str = '';
+            for (let i = 0, len = 1; i < len; i++) {
+              let fontProvider = pdfjs_fonts[textContent.items[i].fontName];
+
+              let options = {
+                item: textContent.items[i],
+                pageMatrix: page.matrix,
+                fontProvider: fontProvider
+              }
+
+              var line = new XLine(options);
+              line.run()
+              xod_stucts = xod_stucts.concat(line.lineStruct)
+              xod_quads = xod_quads.concat(line.quads)
+              xod_str += line.textLine;
+              console.log(line);
+              // console.log('\n');
+            }
+            var data_struct = [1].concat(xod_stucts)
+            // console.log(xod_str);
+            // console.log(data_quads);
+            // console.log(data_struct);
+            var xod_data = {
+              offsets: [],// [0, 1, 2, 3, 4, 5, 6, 7, 8, -2],
+              quads: xod_quads,
+              str: xod_str,
+              struct: data_struct
+            }
+
+            console.log(xod_data);
+            var selInfo = new XODText.SelectionInfo();
+            selInfo.parseFromOld({
+              m_Struct: xod_data['struct'],
+              m_Str: xod_data['str'],
+              m_Offsets: xod_data['offsets'],
+              m_Quads: xod_data['quads'],
+              m_Ready: true
+            });
+            me.correctQuadsForPageRotation(pageIndex, selInfo);
+            me.pages[pageIndex].text = selInfo;
+            me.textCallbacksLookup[pageIndex].forEach(function(completeCB) {
+              exports.utils.log('text', 'Callback ' + pageIndex);
+              completeCB(selInfo);
+            });
+            delete me.textCallbacksLookup[pageIndex];
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          })
+        me.textCallbacksLookup[pageIndex] = [onComplete];
+      }
+    },
+
+
+
+
+
+
+    'loadTextDataX': function(pageIndex, onComplete) {
+      var me = this;
+      if (me.pages[pageIndex].text !== null) {
+        onComplete(me.pages[pageIndex].text);
+      } else if (pageIndex in me.textCallbacksLookup) {
+        me.textCallbacksLookup[pageIndex].push(onComplete);
+      } else {
+        exports.utils.log('text', 'Load text ' + (pageIndex + 1));
+        var pdfPageCache = null;
+        me.pdfDocument.getPage(pageIndex + 1)
+          .then(function(pdfPage) {
+            pdfPageCache = pdfPage
+            return pdfPage.getTextContent({
+              // normalizeWhitespace: true,
+              // combineTextItems: true
+            });
+          })
+          .then(function(textContent) {
             // "ff": String.fromCharCode(0xFB00),
             // "fi": String.fromCharCode(0xFB01),
             // "fl": String.fromCharCode(0xFB02),
