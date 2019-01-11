@@ -573,13 +573,15 @@
             let page = me.pages[0];
             let pdfjs_fonts = me._map_font_data(pdfPageCache.commonObjs._objs)
             let xod_stucts = [], xod_quads = [], xod_str = '';
-            for (let i = 0, len = 1; i < len; i++) {
+            let line_count = 0;
+            for (let i = 0, len = textContent.items.length; i < len; i++) {
               let fontProvider = pdfjs_fonts[textContent.items[i].fontName];
 
               let options = {
                 item: textContent.items[i],
                 pageMatrix: page.matrix,
-                fontProvider: fontProvider
+                fontProvider: fontProvider,
+                charCount: xod_str.length
               }
 
               var line = new XLine(options);
@@ -588,9 +590,10 @@
               xod_quads = xod_quads.concat(line.quads)
               xod_str += line.textLine;
               console.log(line);
+              line_count++;
               // console.log('\n');
             }
-            var data_struct = [1].concat(xod_stucts)
+            var data_struct = [line_count].concat(xod_stucts)
             // console.log(xod_str);
             // console.log(data_quads);
             // console.log(data_struct);
@@ -690,7 +693,7 @@
             let page = me.pages[0];
             let line_count = 0;
             let pdfjs_fonts = me._map_font_data(pdfPageCache.commonObjs._objs)
-            for (var j = 0; j < textContent.items.length; j++) {
+            for (var j = 0; j < 3; j++) {
               let item = textContent.items[j]
               let font = pdfjs_fonts[item.fontName]
               var unicodeMap = {}
@@ -783,6 +786,7 @@
                   if (tx === 0 ){
                     char_length = space_width
                   }
+                  console.log(xline.charAt(i), char_length);
 
                 let char_x = transform[4]//x + (char_length * i)
                 // console.log(xline[i], char_length, transform);

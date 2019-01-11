@@ -31,7 +31,7 @@
         toUnicode: this.font.toUnicode,
         fontMatrix: this._fontMatrix,
         lineHeight: this.height,
-        index: i
+        index: options.charCount + i
       }
       let glyph = new XGlyph(opt)
       if (glyph.width === 0) {
@@ -52,7 +52,7 @@
     if (!this.font.cMap) {
       let originalWidth = this.lineWidth;
       let newWidth = transform[4]
-      let calculatedWidth = (originalWidth - newWidth) / this.wordCount
+      let calculatedWidth = (originalWidth - newWidth) / (this.wordCount - 1)
       if (calculatedWidth === -Infinity || calculatedWidth === Infinity || isNaN(calculatedWidth)) {
         calculatedWidth = 0;
       }
@@ -66,23 +66,29 @@
     let index = 0;
     for (let i = 0, len = words.length; i < len; i++) {
       // let res = this.glyphs.slice(index, index + words[i].length )
+      let word;
+      if (len - 1 === i) {
+        word = words[i];
+      } else {
+        word = words[i] + ' ';
+      }
 
       let start = index;
-      let end = index + words[i].length;
-      if (words[i].length === 0) {
+      let end = index + word.length;
+      if (word.length === 0) {
         // console.warn(words[i]);
         end += 1
       }
       // console.log(res);
       let o = {
-        word: words[i],
+        word: word,
         // font: this.font,
         line: this,
         start: start,
         end: end
       }
       this.words.push(new XWord(o))
-      index += words[i].length + 1
+      index += word.length
     }
   }
 
@@ -138,23 +144,17 @@
       }
     },
     _get_quad: function(x, y, width, height) {
-      // var extraButtomSpace = height * 0.23
+      var extraButtomSpace = height * 0.23
       var x1 = x
       var y1 = (y - height)
       var x2 = x1 + width
       var y2 = y1
       var x3 = x2
-      var y3 = (y1 + height)
-      var x4 = x1
+      var y3 = (y1 + height) + extraButtomSpace
+      var x4 = x1 + extraButtomSpace
       var y4 = y3
       return { x1, y1, x2, y2, x3, y3, x4, y4  }
     },
-    // get right_x() {
-    //   return this.x + this.width
-    // },
-    // get left_x() {
-    //   return this.x
-    // },
     toString: function() {
         return this.textLine + ' ' + this.textLine.split(' ').length;
     },
@@ -191,11 +191,14 @@
     },
     get stucts() {
       let firstGlyph = this.firstGlyph
+      if (!firstGlyph) {
+        console.log('not');
+      }
       let p0 = this.word.length
       let p1 = firstGlyph.index;// - aWord.length;
       let p2 = this.word.length
       let p3 = this.quads[0]
-      let p4 = this.quads[this.quads.length - 1]
+      let p4 = this.quads[this.quads.length - 6]
       var w_struct = [p0, p1, p2, p3, p4]
       return w_struct
     },
@@ -206,9 +209,7 @@
       let glyphs = this.glyphs
       var quads = []
       for (let i = 0; i < glyphs.length; i++) {
-        if (!glyphs[i].isSpace) {
-          quads = quads.concat(glyphs[i].quad)
-        }
+        quads = quads.concat(glyphs[i].quad)
       }
       this._quads = quads
       return quads
