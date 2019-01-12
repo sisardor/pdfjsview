@@ -542,7 +542,9 @@
       tmtx.initCoordinates(1, 0, 0, -1, -bb.x1, bb.y2);
       return tmtx;
     },
-    'loadTextData': function(pageIndex, onComplete) {
+    'loadTextDataX': function(pageIndex, onComplete) {
+      var c = document.getElementById("page" +(pageIndex + 1));
+      var ctx = c.getContext("2d");
       var me = this;
       if (me.pages[pageIndex].text !== null) {
         onComplete(me.pages[pageIndex].text);
@@ -590,10 +592,13 @@
 
               var line = new XLine(options);
               line.run()
+              // console.log(line);
+              // line._drawRect(ctx, page.scale)
+              // line.run()
               xod_stucts = xod_stucts.concat(line.lineStruct)
               xod_quads = xod_quads.concat(line.quads)
               xod_str += line.textLine;
-              console.log(line);
+              // console.log(line);
               line_count++;
               // console.log('\n');
             }
@@ -601,8 +606,12 @@
             // console.log(xod_str);
             // console.log(data_quads);
             // console.log(data_struct);
+            var offsets = [];
+            for(let i = 0, len = xod_str.length; i < len; i++) {
+              offsets[i] = (xod_str.charAt(i) === ' ') ? -1 : i ;
+            }
             var xod_data = {
-              offsets: [],// [0, 1, 2, 3, 4, 5, 6, 7, 8, -2],
+              offsets: offsets,
               quads: xod_quads,
               str: xod_str,
               struct: data_struct
@@ -649,7 +658,7 @@
 
 
 
-    'loadTextDataX': function(pageIndex, onComplete) {
+    'loadTextData': function(pageIndex, onComplete) {
       var me = this;
       if (me.pages[pageIndex].text !== null) {
         onComplete(me.pages[pageIndex].text);
@@ -697,7 +706,7 @@
             let page = me.pages[0];
             let line_count = 0;
             let pdfjs_fonts = me._map_font_data(pdfPageCache.commonObjs._objs)
-            for (var j = 0; j < 3; j++) {
+            for (var j = 0; j < textContent.items.length; j++) {
               let item = textContent.items[j]
               let font = pdfjs_fonts[item.fontName]
               var unicodeMap = {}
@@ -858,8 +867,15 @@
             // console.log(xod_str);
             // console.log(data_quads);
             // console.log(data_struct);
+            var offsets = [];
+            var reducer = (arr, char, i) => {
+              var dict = { '\n': -2, ' ': -1 }
+              arr[i] = dict[char] || i;
+              return arr;
+            }
+            xod_str.split('').reduce(reducer, offsets)
             var xod_data = {
-              offsets: [],// [0, 1, 2, 3, 4, 5, 6, 7, 8, -2],
+              offsets: offsets,
               quads: data_quads,
               str: xod_str,
               struct: data_struct
@@ -1008,14 +1024,14 @@
     //   onComplete(selInfo)
     // },
     _get_quad: function(x, y, width, height, scale) {
-      var extraButtomSpace = height * 0.23
+      // var extraButtomSpace = height * 0.23
       var x1 = x
       var y1 = (y - height)
       var x2 = x1 + width
       var y2 = y1
       var x3 = x2
-      var y3 = (y1 + height) + extraButtomSpace
-      var x4 = x1 + extraButtomSpace
+      var y3 = (y1 + height)
+      var x4 = x1
       var y4 = y3
       return { x1, y1, x2, y2, x3, y3, x4, y4  }
     },

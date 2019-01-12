@@ -101,7 +101,7 @@
       } else {
         word = words[i] + ' ';
       }
-      
+
 
       let start = index;
       let end = index + word.length;
@@ -135,6 +135,9 @@
     },
     get lineWidth() {
       return this.x + this.width
+    },
+    get _m_quad() {
+      var quad = []
     },
     get quads() {
       if (this._quads) {
@@ -184,8 +187,8 @@
       var x2 = x1 + width
       var y2 = y1
       var x3 = x2
-      var y3 = (y1 + height) + extraButtomSpace
-      var x4 = x1 + extraButtomSpace
+      var y3 = (y1 + height)
+      var x4 = x1 
       var y4 = y3
       return { x1, y1, x2, y2, x3, y3, x4, y4  }
     },
@@ -194,7 +197,16 @@
     },
     words: function() {
       return this.textLine.split(' ');
-    }
+    },
+    _drawRect: function(ctx, scale){
+      var mul = exports.utils.getCanvasMultiplier();
+      scale = scale * mul;
+      var y = this.y - this.height;
+      ctx.translate(0.5, 0.5)
+      ctx.setLineDash([12]);
+      ctx.rect(this.x * scale, y * scale, this.width * scale, this.height * scale);
+      ctx.stroke()
+    },
   }
 
   var XWord = function XWord(options) {
@@ -223,18 +235,40 @@
     get firstGlyph() {
       return this._line.glyphs[this._start]
     },
+    get _m_quad() {
+      var quad = new Array(8);
+      let first = this._line.glyphs[this._start]
+      return quad;
+    },
     get stucts() {
       let firstGlyph = this.firstGlyph
       if (!firstGlyph) {
         console.log('not');
       }
-      let p0 = this.word.length
-      let p1 = firstGlyph.index;// - aWord.length;
-      let p2 = this.word.length
-      let p3 = this.quads[0]
-      let p4 = this.quads[this.quads.length - 6]
-      var w_struct = [p0, p1, p2, p3, p4]
-      return w_struct
+
+
+      // if (this.word[this.word.length - 1] === ' ') {
+      //   var offset = (this.word.length - 1 === 0) ? 0 : 1
+      //
+      //   let p0 = this.word.length - offset;
+      //   let p1 = firstGlyph.index // char_pos - aWord.length;
+      //   let p2 = this.word.length - offset;
+      //   let p3 = this.quads[0]
+      //   let p4 = this.quads[this.quads.length - 1 - 7]
+      //   var w_struct = [p0, p1, p2, p3, p4]
+      //   return w_struct
+      //   // let p3 = w_quad[0]//char_quad.x1 - (char_length  * (aWord.length - offset));
+      //   // let p4 = w_quad[w_quad.length - 1 - 7]//char_quad.x2 - char_length;
+      // } else {
+        let p0 = this.word.length
+        let p1 = firstGlyph.index;// - aWord.length;
+        let p2 = this.word.length
+        let p3 = this.quads[0]
+        let p4 = this.quads[this.quads.length - 6]
+        var w_struct = [p0, p1, p2, p3, p4]
+        return w_struct
+      // }
+
     },
     get quads() {
       if (this._quads) {
@@ -243,7 +277,10 @@
       let glyphs = this.glyphs
       var quads = []
       for (let i = 0; i < glyphs.length; i++) {
-        quads = quads.concat(glyphs[i].quad)
+        // if (glyphs[i].isSpace) {
+          quads = quads.concat(glyphs[i].quad)
+        // }
+
       }
       this._quads = quads
       return quads
@@ -269,7 +306,7 @@
     }
     this.unicode = charcode;
     if (this.unicode === -1){
-      console.log('!');
+      // console.log('!');
     }
     widthCode = charcode;
 
