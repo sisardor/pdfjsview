@@ -188,7 +188,7 @@
       var y2 = y1
       var x3 = x2
       var y3 = (y1 + height)
-      var x4 = x1 
+      var x4 = x1
       var y4 = y3
       return { x1, y1, x2, y2, x3, y3, x4, y4  }
     },
@@ -203,10 +203,21 @@
       scale = scale * mul;
       var y = this.y - this.height;
       ctx.translate(0.5, 0.5)
-      ctx.setLineDash([12]);
+      ctx.setLineDash([6]);
       ctx.rect(this.x * scale, y * scale, this.width * scale, this.height * scale);
       ctx.stroke()
+      return;
     },
+    _drawLine(ctx, scale) {
+      var mul = exports.utils.getCanvasMultiplier();
+      scale = scale * mul;
+      var x = this.x;
+      var y = this.y - this.height
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(x * scale , y * scale);
+      ctx.stroke();
+    }
   }
 
   var XWord = function XWord(options) {

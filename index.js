@@ -200,3 +200,37 @@ let scale = MULTIPLIER * this.doc.scale
 //   }
 //   ]
 // }
+
+
+var temp = `Trace-based Just-in-Time Type Specialization for Dynamic
+Languages
+1.  Introduction
+Andreas Gal∗+, Brendan Eich∗, Mike Shaver∗, David Anderson∗, David Mandelin∗,`
+let r = temp.split('\n')
+let pivot = 0, pi = 0
+var struct = []
+r.forEach((line, i) => {
+    let lastIndex = pivot + line.length
+	console.log(pivot, line, lastIndex)
+	pivot += line.length + 1
+	let w = line.split(' ')
+    w.forEach((word, j) => {
+        var m = 1;
+        var length = word.length;
+		if (length === 0) {
+          length = 1
+          m = 0;
+		}
+// 		var char = temp[pi]
+// 		console.log(' ',pi, `"${word}"  "${char}"`)
+//         console.log(`"${word}" -- index: ${pi}, length: ${length}`)
+        if (word.length) {
+          struct.push([length, pi, length])
+        }
+		pi += length + m
+    })
+})
+var line = [
+
+]
+console.log(struct)

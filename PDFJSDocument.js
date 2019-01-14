@@ -542,9 +542,10 @@
       tmtx.initCoordinates(1, 0, 0, -1, -bb.x1, bb.y2);
       return tmtx;
     },
-    'loadTextDataX': function(pageIndex, onComplete) {
+    'loadTextData': function(pageIndex, onComplete) {
       var c = document.getElementById("page" +(pageIndex + 1));
       var ctx = c.getContext("2d");
+      // ctx.translate(0.5, 0.5)
       var me = this;
       if (me.pages[pageIndex].text !== null) {
         onComplete(me.pages[pageIndex].text);
@@ -557,8 +558,8 @@
           .then(function(pdfPage) {
             pdfPageCache = pdfPage
             return pdfPage.getTextContent({
-              // normalizeWhitespace: true,
-              // combineTextItems: true
+              normalizeWhitespace: true,
+              combineTextItems: true
             });
           })
           .then(function(textContent) {
@@ -567,7 +568,7 @@
 
 
 
-
+            window.textContent = textContent
 
 
 
@@ -576,13 +577,10 @@
             let pdfjs_fonts = me._map_font_data(pdfPageCache.commonObjs._objs)
             let xod_stucts = [], xod_quads = [], xod_str = '';
             let line_count = 0;
+            let lines = [];
             for (let i = 0, len = textContent.items.length; i < len; i++) {
               let fontProvider = pdfjs_fonts[textContent.items[i].fontName];
-              let text = textContent.items[i].str
-              if (text.length === 1 && text === ' ') {
-                xod_str += text;
-                continue;
-              }
+
               let options = {
                 item: textContent.items[i],
                 pageMatrix: page.matrix,
@@ -590,18 +588,61 @@
                 charCount: xod_str.length
               }
 
-              var line = new XLine(options);
-              line.run()
-              // console.log(line);
+              var line = new Line(options);
+
+
+                if (i > 0) {
+                  let prev_line = lines[i - 1];
+                  if (prev_line.top === line.top && prev_line.bottom === line.bottom) {
+                    lines.push(line);
+                    continue;
+                  }
+                  let top1 = prev_line.top;
+                  let top2 = line.top;
+
+                  let bottom1 = prev_line.bottom;
+                  let bottom2 = line.bottom;
+                  // console.log(top1, top2, bottom1, bottom2);
+                  let res1 = bottom1 - top2;
+                  let res2 = top1 - bottom2;
+                  let proximity = line.left_x - prev_line.right_x
+                  // console.log(res1, res2);
+                  if (
+                    (res1 >= 0 && res2 <= 0 || res1 <= 0 && res2 >= 0)
+                    && proximity < 10) {
+                    // console.log('same line');
+                    // let proximity = line.left_x - prev_line.right_x
+                    // if (proximity < 2) {
+                    //
+                    // }
+                    // console.log('proximity', proximity);
+                    // console.log('\n\n');
+                    let new_top = Math.min(top1, top2, bottom1, bottom2)
+                    let new_bottom = Math.max(top1, top2, bottom1, bottom2)
+                    // prev_line.setTop(new_top)
+                    // line.setTop(new_top)
+                    //
+                    // prev_line.setBottom(new_bottom)
+                    // line.setBottom(new_bottom)
+                  } else {
+                    // console.log('last word', prev_line);
+                    prev_line.addNewline()
+                  }
+                }
               // line._drawRect(ctx, page.scale)
-              // line.run()
-              xod_stucts = xod_stucts.concat(line.lineStruct)
-              xod_quads = xod_quads.concat(line.quads)
-              xod_str += line.textLine;
-              // console.log(line);
-              line_count++;
-              // console.log('\n');
+              lines.push(line);
+
             }
+            var str = ''
+            for (let i = 0, len = lines.length; i < len; i++) {
+              lines[i]._drawRect(ctx, page.scale)
+              // console.log(lines[i]);
+              str += lines[i].text
+            }
+            console.log(str);
+
+
+
             var data_struct = [line_count].concat(xod_stucts)
             // console.log(xod_str);
             // console.log(data_quads);
@@ -658,7 +699,7 @@
 
 
 
-    'loadTextData': function(pageIndex, onComplete) {
+    'loadTextDataX': function(pageIndex, onComplete) {
       var me = this;
       if (me.pages[pageIndex].text !== null) {
         onComplete(me.pages[pageIndex].text);
