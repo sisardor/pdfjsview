@@ -542,6 +542,9 @@
       tmtx.initCoordinates(1, 0, 0, -1, -bb.x1, bb.y2);
       return tmtx;
     },
+    parseQuad: function parseQuad(arr, offset){
+        return arr.slice(offset, offset +  8);
+    },
     'loadTextData': function(pageIndex, onComplete) {
       var c = document.getElementById("page" +(pageIndex + 1));
       var ctx = c.getContext("2d");
@@ -584,66 +587,122 @@
               let options = {
                 item: textContent.items[i],
                 pageMatrix: page.matrix,
-                fontProvider: fontProvider,
+                font: fontProvider,
                 charCount: xod_str.length
               }
 
               var line = new Line(options);
-
-
-                if (i > 0) {
-                  let prev_line = lines[i - 1];
-                  if (prev_line.top === line.top && prev_line.bottom === line.bottom) {
-                    lines.push(line);
-                    continue;
-                  }
-                  let top1 = prev_line.top;
-                  let top2 = line.top;
-
-                  let bottom1 = prev_line.bottom;
-                  let bottom2 = line.bottom;
-                  // console.log(top1, top2, bottom1, bottom2);
-                  let res1 = bottom1 - top2;
-                  let res2 = top1 - bottom2;
-                  let proximity = line.left_x - prev_line.right_x
-                  // console.log(res1, res2);
-                  if (
-                    (res1 >= 0 && res2 <= 0 || res1 <= 0 && res2 >= 0)
-                    && proximity < 10) {
-                    // console.log('same line');
-                    // let proximity = line.left_x - prev_line.right_x
-                    // if (proximity < 2) {
-                    //
-                    // }
-                    // console.log('proximity', proximity);
-                    // console.log('\n\n');
-                    let new_top = Math.min(top1, top2, bottom1, bottom2)
-                    let new_bottom = Math.max(top1, top2, bottom1, bottom2)
-                    // prev_line.setTop(new_top)
-                    // line.setTop(new_top)
-                    //
-                    // prev_line.setBottom(new_bottom)
-                    // line.setBottom(new_bottom)
-                  } else {
-                    // console.log('last word', prev_line);
-                    prev_line.addNewline()
-                  }
+              // console.log(line);
+              if (i > 0) {
+                let prev_line = lines[i - 1];
+                if (prev_line.top === line.top && prev_line.bottom === line.bottom) {
+                  lines.push(line);
+                  continue;
                 }
-              // line._drawRect(ctx, page.scale)
+                let top1 = prev_line.top;
+                let top2 = line.top;
+                let bottom1 = prev_line.bottom;
+                let bottom2 = line.bottom;
+                let res1 = bottom1 - top2;
+                let res2 = top1 - bottom2;
+                let proximity = line.left_x - prev_line.right_x
+                if (
+                  (res1 >= 0 && res2 <= 0 || res1 <= 0 && res2 >= 0)
+                  && proximity < 10) {
+                  let new_top = Math.min(top1, top2, bottom1, bottom2)
+                  let new_bottom = Math.max(top1, top2, bottom1, bottom2)
+                  // prev_line.setTop(new_top)
+                  // line.setTop(new_top)
+                  // prev_line.setBottom(new_bottom)
+                  // line.setBottom(new_bottom)
+                } else {
+                  prev_line.addNewline()
+                }
+              }
               lines.push(line);
-
             }
-            var str = ''
+
+
             for (let i = 0, len = lines.length; i < len; i++) {
-              lines[i]._drawRect(ctx, page.scale)
-              // console.log(lines[i]);
-              str += lines[i].text
+              // lines[i]._drawRect(ctx, page.scale)
+
+              lines[i].run()
+              // console.log(lines[i].text,lines[i].getStructs());
+              xod_quads.push(lines[i].getQuads())
+              xod_str += lines[i].text
             }
-            console.log(str);
+            xod_quads = xod_quads.flat()
 
 
 
-            var data_struct = [line_count].concat(xod_stucts)
+
+
+            let _lines = xod_str.split('\n')
+            let pivot = 0
+            let pi = 0
+            var line_struct = []
+            for (let i = 0, len = _lines.length; i < len; i++) {
+              let line = _lines[i]
+              let lastIndex = pivot + line.length
+              pivot += line.length + 1
+              var struct = []
+
+              let words = line.split(' ')
+              for (let j = 0, len2 = words.length; j < len2; j++) {
+                let word = words[j]
+                let wlength = (word.length) ? word.length : 1 ;
+                var offset = (word.length) ? 1 : 0 ;
+
+                if (word.length) {
+                  let q = xod_quads.slice(pi, pi + word.length) //me.parseQuad(xod_quads, pi + word.length)
+                  let first_g = q[0]
+                  let last_g = q[q.length-1]
+                  let word_left_x = first_g[0]
+                  let word_right_x = last_g[2]
+                  console.log(word,q);
+                  struct.push([wlength, pi, wlength, word_left_x, word_right_x])
+                }
+
+                pi += wlength + offset
+              }
+              if (words[words.length-1] === '') {
+                words.pop()
+              }
+              let line_quads = xod_quads.slice(pi - line.length - 1, pi - 1)
+              let line_first_g = line_quads[0]
+              let line_last_g = line_quads[line_quads.length - 1]
+              let line_left_x = line_first_g[0];
+              let line_right_x = line_last_g[2];
+              let line_top = line_first_g[1]
+              let line_bottom = line_first_g[7]
+              var st = [words.length,line.length, line_left_x, line_bottom, line_right_x, line_top]
+              var wt = struct.flat()
+              var _l = st.concat(wt)
+              line_struct = line_struct.concat(_l)
+            }
+
+            console.log(line_struct)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            var data_struct = [_lines.length].concat(line_struct)
             // console.log(xod_str);
             // console.log(data_quads);
             // console.log(data_struct);
@@ -653,7 +712,7 @@
             }
             var xod_data = {
               offsets: offsets,
-              quads: xod_quads,
+              quads: xod_quads.flat(),
               str: xod_str,
               struct: data_struct
             }

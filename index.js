@@ -217,20 +217,62 @@ r.forEach((line, i) => {
     w.forEach((word, j) => {
         var m = 1;
         var length = word.length;
-		if (length === 0) {
-          length = 1
-          m = 0;
-		}
-// 		var char = temp[pi]
-// 		console.log(' ',pi, `"${word}"  "${char}"`)
-//         console.log(`"${word}" -- index: ${pi}, length: ${length}`)
+    		if (length === 0) {
+              length = 1
+              m = 0;
+    		}
+        // 		var char = temp[pi]
+        // 		console.log(' ',pi, `"${word}"  "${char}"`)
+        //         console.log(`"${word}" -- index: ${pi}, length: ${length}`)
         if (word.length) {
           struct.push([length, pi, length])
         }
-		pi += length + m
+    		pi += length + m
     })
 })
 var line = [
 
 ]
+console.log(struct)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+var temp = `WebViewer
+JavaScript-based dfsdf`
+let lines = temp.split('\n')
+let pivot = 0
+let pi = 0
+var struct = []
+console.log(lines)
+for (let i = 0, len = lines.length; i < len; i++) {
+  let line = lines[i]
+  let lastIndex = pivot + line.length
+  pivot += line.length + 1
+  let words = line.split(' ')
+  for (let j = 0, len2 = words.length; j < len2; j++) {
+    let word = words[j]
+    let wlength = (word.length) ? word.length : 1 ;
+    var offset = (word.length) ? 1 : 0 ;
+
+    if (word.length) {
+      struct.push([wlength, pi, wlength])
+    }
+    pi += wlength + offset
+  }
+}
+var line = []
 console.log(struct)
