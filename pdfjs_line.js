@@ -8,7 +8,7 @@
     constructor(opts) {
       // console.log(opts.item);
       let item = opts.item;
-      let text = item.str;
+      let text = item.str.replace(/\s+/g, " ");
       let transform = item.transform;
       let matrix = opts.pageMatrix;
       let fontMatrix = (opts.font.fontMatrix) ? opts.font.fontMatrix : [0.001]
@@ -20,11 +20,13 @@
       x = this.parseNum(coord.x);
       y = this.parseNum(coord.y)
 
+      // bottom offset %23
+      this._bottom_offset =  0.20
+
       let left_x = x;
       let right_x = this.parseNum(left_x + width)
       let top = this.parseNum(y - height)
       let bottom = y
-
 
       // console.log(`(${left_x}, ${top})` +
       //             `(${right_x}, ${top})` +
@@ -55,9 +57,9 @@
       this._unicodeMap = unicodeMap
     }
     run() {
-      if (this.text === 'fi') {
-        debugger
-      }
+      // if (this.text === 'fi') {
+      //   debugger
+      // }
       let isThereSpace = false;
       if (/\s/.test(this.text)) {
         // found space width
@@ -107,7 +109,7 @@
         let originalWidth = this.left_x + this._width;
         let newWidth = this._textMatrix[4]
         let words = this.text.split(' ');
-        let calculatedWidth = (originalWidth - newWidth) / words.length
+        let calculatedWidth = (originalWidth - newWidth) / (this.text.split(' ').length - 1)
         if (calculatedWidth === -Infinity || calculatedWidth === Infinity || isNaN(calculatedWidth)) {
           calculatedWidth = 0;
         }
@@ -122,7 +124,8 @@
         let left_x = transform[4];
         let right_x = left_x + glyph.char_length;
         let top = this.top;
-        let bottom = this.bottom;
+        let off = (this.bottom - this.top) * this._bottom_offset
+        let bottom = this.bottom + off
         // console.log(`(${left_x}, ${top})` +
         //             `(${right_x}, ${top})` +
         //             `(${right_x}, ${bottom})` +

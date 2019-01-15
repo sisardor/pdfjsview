@@ -304,8 +304,8 @@
                   renderingQueue: me.renderingQueue,
                   defaultViewport: viewport.clone(),
                   // annotationLayerFactory: me,
-                  textLayerFactory: me,
-                  textLayerMode: me.textLayerMode,
+                  // textLayerFactory: me,
+                  // textLayerMode: me.textLayerMode,
                   eventBus: me.eventBus
                 });
                 me.pages.push(pageView);
@@ -545,9 +545,11 @@
     parseQuad: function parseQuad(arr, offset){
         return arr.slice(offset, offset +  8);
     },
-    'loadTextData': function(pageIndex, onComplete) {
-      var c = document.getElementById("page" +(pageIndex + 1));
-      var ctx = c.getContext("2d");
+    // 2.828280866222207 correct
+    // 2.5454527795999864 wrong
+    'loadTextDataX': function(pageIndex, onComplete) {
+      // var c = document.getElementById("page" +(pageIndex + 1));
+      // var ctx = c.getContext("2d");
       // ctx.translate(0.5, 0.5)
       var me = this;
       if (me.pages[pageIndex].text !== null) {
@@ -627,7 +629,7 @@
               // lines[i]._drawRect(ctx, page.scale)
 
               lines[i].run()
-              // console.log(lines[i].text,lines[i].getStructs());
+              // console.log(lines[i]);
               xod_quads.push(lines[i].getQuads())
               xod_str += lines[i].text
             }
@@ -659,9 +661,20 @@
                   let last_g = q[q.length-1]
                   let word_left_x = first_g[0]
                   let word_right_x = last_g[2]
-                  console.log(word,q);
+                  // console.log(word,q);
                   struct.push([wlength, pi, wlength, word_left_x, word_right_x])
+
                 }
+                // if (word.length === 0) {
+                //   console.error('length error');
+                //   let q = xod_quads.slice(pi, pi + 1) //me.parseQuad(xod_quads, pi + word.length)
+                //   let first_g = q[0]
+                //   let last_g = q[q.length-1]
+                //   let word_left_x = first_g[0]
+                //   let word_right_x = last_g[2]
+                //   // console.log(word,q);
+                //   struct.push([1, pi, 1, word_left_x, word_right_x])
+                // }
 
                 pi += wlength + offset
               }
@@ -681,7 +694,7 @@
               line_struct = line_struct.concat(_l)
             }
 
-            console.log(line_struct)
+            // console.log(line_struct)
 
 
 
@@ -717,7 +730,7 @@
               struct: data_struct
             }
 
-            console.log(xod_data);
+            // console.log(xod_data);
             var selInfo = new XODText.SelectionInfo();
             selInfo.parseFromOld({
               m_Struct: xod_data['struct'],
@@ -1100,29 +1113,7 @@
       }
       return fonts;
     },
-    // 'loadTextData': function(pageIndex, onComplete) {
-    //   var me = this;
-    //
-    //   var data = {
-    //     "offsets":[0,1,2,3,4,5,6,7,8,-2],
-    //     "quads":[30.493199999999998,80.91402960000016,48.6952575,80.91402960000016,48.6952575,54.43830960000014,30.493199999999998,54.43830960000014,48.011301399999994,80.91402960000016,60.013627799999995,80.91402960000016,60.013627799999995,54.43830960000014,48.011301399999994,54.43830960000014,60.013627799999995,80.91402960000016,71.9497649,80.91402960000016,71.9497649,54.43830960000014,60.013627799999995,54.43830960000014,71.94976489999999,80.91402960000016,86.1363382,80.91402960000016,86.1363382,54.43830960000014,71.94976489999999,54.43830960000014,86.1363382,80.91402960000016,91.5859239,80.91402960000016,91.5859239,54.43830960000014,86.1363382,54.43830960000014,91.5859239,80.91402960000016,103.5882503,80.91402960000016,103.5882503,54.43830960000014,91.5859239,54.43830960000014,103.4779348,80.91402960000016,120.8195314,80.91402960000016,120.8195314,54.43830960000014,103.4779348,54.43830960000014,120.4885849,80.91402960000016,132.49091130000002,80.91402960000016,132.49091130000002,54.43830960000014,120.4885849,54.43830960000014,132.49091130000002,80.91402960000016,140.0364915,80.91402960000016,140.0364915,54.43830960000014,132.49091130000002,54.43830960000014,132.49091130000002,80.91402960000016,140.0364915,80.91402960000016,140.0364915,54.43830960000014,132.49091130000002,54.43830960000014],
-    //     "str":"WebViewer\n",
-    //     "struct":[1,1,11,30.493199999999998,80.91402960000016,140.0364915,54.43830960000014,9,0,9,30.493199999999998,140.0364915]
-    //   }
-    //
-    //   exports.utils.log('text', 'Text Received ' + pageIndex);
-    //   var selInfo = new XODText.SelectionInfo();
-    //   selInfo.parseFromOld({
-    //     m_Struct: data['struct'],
-    //     m_Str: data['str'],
-    //     m_Offsets: data['offsets'],
-    //     m_Quads: data['quads'],
-    //     m_Ready: true
-    //   });
-    //   me.correctQuadsForPageRotation(pageIndex, selInfo);
-    //   me.pages[pageIndex].text = selInfo;
-    //   onComplete(selInfo)
-    // },
+
     _get_quad: function(x, y, width, height, scale) {
       // var extraButtomSpace = height * 0.23
       var x1 = x
