@@ -346,7 +346,7 @@
       // me.pdfDocument.getPage(pageIdx + 1).then(function(pdfPage) {
       //   var totalRotation = (pageRotation) % 4 * 90;
       //   var viewport = pdfPage['getViewport']({
-      //     scale: me.scale * MULTIPLIER,
+      //     scale: pageZoom ,
       //     rotation: totalRotation
       //   });
       //
@@ -370,8 +370,6 @@
       //   pdfPage.render(renderContext).then(function() {
       //     options['drawComplete'](canvas, pageIdx);
       //   })
-      //
-      //
       // })
       //
       // return
