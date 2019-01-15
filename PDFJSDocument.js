@@ -534,327 +534,195 @@
       tmtx.initCoordinates(1, 0, 0, -1, -bb.x1, bb.y2);
       return tmtx;
     },
-    parseQuad: function parseQuad(arr, offset){
-        return arr.slice(offset, offset +  8);
-    },
-    // 2.828280866222207 correct
-    // 2.5454527795999864 wrong
-    'loadTextData': function(pageIndex, onComplete) {
-      // var c = document.getElementById("page" +(pageIndex + 1));
-      // var ctx = c.getContext("2d");
-      // ctx.translate(0.5, 0.5)
+    loadTextData: function(pageIndex, onComplete) {
+      // console.log('loadTextData', pageIndex);
       var me = this;
+      let page = me.pages[pageIndex];
+
       if (me.pages[pageIndex].text !== null) {
         onComplete(me.pages[pageIndex].text);
       } else if (pageIndex in me.textCallbacksLookup) {
         me.textCallbacksLookup[pageIndex].push(onComplete);
       } else {
+        // console.log('.... ', pageIndex);
         exports.utils.log('text', 'Load text ' + (pageIndex + 1));
-        var pdfPageCache = null;
-        me.pdfDocument.getPage(pageIndex + 1)
-          .then(function(pdfPage) {
-            pdfPageCache = pdfPage
-            return pdfPage.getTextContent({
-              normalizeWhitespace: true,
-              combineTextItems: true
-            });
-          })
-          .then(function(textContent) {
+        let pdfPageCache = null;
+        this.requirePage(pageIndex + 1).then(function() {
+          me.pdfDocument.getPage(pageIndex + 1)
+            .then(function(pdfPage) {
+              pdfPageCache = pdfPage
+              return pdfPage.getTextContent({
+                normalizeWhitespace: true,
+                combineTextItems: true
+              });
+            })
+            .then(function(textContent) {
 
-
-
-
-
-            window.textContent = textContent
-
-
-
-
-            let page = me.pages[0];
-            let pdfjs_fonts = me._map_font_data(pdfPageCache.commonObjs._objs)
-            let xod_stucts = [], xod_quads = [], xod_str = '';
-            let line_count = 0;
-            let lines = [];
-            for (let i = 0, len = textContent.items.length; i < len; i++) {
-              let fontProvider = pdfjs_fonts[textContent.items[i].fontName];
-
-              let options = {
-                item: textContent.items[i],
-                pageMatrix: page.matrix,
-                font: fontProvider,
-                charCount: xod_str.length
-              }
-
-              var line = new Line(options);
-              // console.log(line);
-              if (i > 0) {
-                let prev_line = lines[i - 1];
-                if (prev_line.top === line.top && prev_line.bottom === line.bottom) {
-                  lines.push(line);
-                  continue;
+              let pdfjs_fonts = me._map_font_data(pdfPageCache.commonObjs._objs)
+              // console.log(pageIndex, pdfjs_fonts);
+              let xod_stucts = [], xod_quads = [], xod_str = '';
+              let line_count = 0;
+              let lines = [];
+              for (let i = 0, len = textContent.items.length; i < len; i++) {
+                let fontProvider = pdfjs_fonts[textContent.items[i].fontName];
+                if (!fontProvider) {
+                  me.textCallbacksLookup[pageIndex].forEach(function(completeCB) {
+                    exports.utils.log('text', 'Callback ' + pageIndex);
+                    var selInfo = new XODText.SelectionInfo();
+                    completeCB(selInfo);
+                  });
+                  return;
                 }
-                let top1 = prev_line.top;
-                let top2 = line.top;
-                let bottom1 = prev_line.bottom;
-                let bottom2 = line.bottom;
-                let res1 = bottom1 - top2;
-                let res2 = top1 - bottom2;
-                let proximity = line.left_x - prev_line.right_x
-                if (
-                  (res1 >= 0 && res2 <= 0 || res1 <= 0 && res2 >= 0)
-                  && proximity < 10) {
-                  let new_top = Math.min(top1, top2, bottom1, bottom2)
-                  let new_bottom = Math.max(top1, top2, bottom1, bottom2)
-                  // prev_line.setTop(new_top)
-                  // line.setTop(new_top)
-                  // prev_line.setBottom(new_bottom)
-                  // line.setBottom(new_bottom)
-                } else {
-                  prev_line.addNewline()
+
+                let options = {
+                  item: textContent.items[i],
+                  pageMatrix: page.matrix,
+                  font: fontProvider,
+                  charCount: xod_str.length
                 }
-              }
-              lines.push(line);
-            }
 
-
-            for (let i = 0, len = lines.length; i < len; i++) {
-              // lines[i]._drawRect(ctx, page.scale)
-
-              lines[i].run()
-              // console.log(lines[i]);
-              xod_quads.push(lines[i].getQuads())
-              xod_str += lines[i].text
-            }
-            xod_quads = xod_quads.flat()
-
-
-
-
-
-            let _lines = xod_str.split('\n')
-            let pivot = 0
-            let pi = 0
-            var line_struct = []
-            for (let i = 0, len = _lines.length; i < len; i++) {
-              let line = _lines[i]
-              let lastIndex = pivot + line.length
-              pivot += line.length + 1
-              var struct = []
-
-              let words = line.split(' ')
-              for (let j = 0, len2 = words.length; j < len2; j++) {
-                let word = words[j]
-                let wlength = (word.length) ? word.length : 1 ;
-                var offset = (word.length) ? 1 : 0 ;
-
-                if (word.length) {
-                  let q = xod_quads.slice(pi, pi + word.length) //me.parseQuad(xod_quads, pi + word.length)
-                  let first_g = q[0]
-                  let last_g = q[q.length-1]
-                  let word_left_x = first_g[0]
-                  let word_right_x = last_g[2]
-                  // console.log(word,q);
-                  struct.push([wlength, pi, wlength, word_left_x, word_right_x])
-
+                var line = new Line(options);
+                // console.log(line);
+                if (i > 0) {
+                  let prev_line = lines[i - 1];
+                  if (prev_line.top === line.top && prev_line.bottom === line.bottom) {
+                    lines.push(line);
+                    continue;
+                  }
+                  let top1 = prev_line.top;
+                  let top2 = line.top;
+                  let bottom1 = prev_line.bottom;
+                  let bottom2 = line.bottom;
+                  let res1 = bottom1 - top2;
+                  let res2 = top1 - bottom2;
+                  let proximity = line.left_x - prev_line.right_x
+                  if (
+                    (res1 >= 0 && res2 <= 0 || res1 <= 0 && res2 >= 0)
+                    && proximity < 10) {
+                    let new_top = Math.min(top1, top2, bottom1, bottom2)
+                    let new_bottom = Math.max(top1, top2, bottom1, bottom2)
+                    // prev_line.setTop(new_top)
+                    // line.setTop(new_top)
+                    // prev_line.setBottom(new_bottom)
+                    // line.setBottom(new_bottom)
+                  } else {
+                    prev_line.addNewline()
+                  }
                 }
-                // if (word.length === 0) {
-                //   console.error('length error');
-                //   let q = xod_quads.slice(pi, pi + 1) //me.parseQuad(xod_quads, pi + word.length)
-                //   let first_g = q[0]
-                //   let last_g = q[q.length-1]
-                //   let word_left_x = first_g[0]
-                //   let word_right_x = last_g[2]
-                //   // console.log(word,q);
-                //   struct.push([1, pi, 1, word_left_x, word_right_x])
-                // }
-
-                pi += wlength + offset
+                lines.push(line);
               }
-              if (words[words.length-1] === '') {
-                words.pop()
+
+              for (let i = 0, len = lines.length; i < len; i++) {
+                // lines[i]._drawRect(ctx, page.scale)
+
+                lines[i].run()
+                // console.log(lines[i]);
+                xod_quads.push(lines[i].getQuads())
+                xod_str += lines[i].text
               }
-              let line_quads = xod_quads.slice(pi - line.length - 1, pi - 1)
-              let line_first_g = line_quads[0]
-              let line_last_g = line_quads[line_quads.length - 1]
-              let line_left_x = line_first_g[0];
-              let line_right_x = line_last_g[2];
-              let line_top = line_first_g[1]
-              let line_bottom = line_first_g[7]
-              var st = [words.length,line.length, line_left_x, line_bottom, line_right_x, line_top]
-              var wt = struct.flat()
-              var _l = st.concat(wt)
-              line_struct = line_struct.concat(_l)
-            }
+              xod_quads = xod_quads.flat()
 
-            // console.log(line_struct)
+              let _lines = xod_str.split('\n')
+              let pivot = 0
+              let pi = 0
+              var line_struct = []
+              for (let i = 0, len = _lines.length; i < len; i++) {
+                let line = _lines[i]
+                let lastIndex = pivot + line.length
+                pivot += line.length + 1
+                var struct = []
 
+                let words = line.split(' ')
+                for (let j = 0, len2 = words.length; j < len2; j++) {
+                  let word = words[j]
+                  let wlength = (word.length) ? word.length : 1 ;
+                  var offset = (word.length) ? 1 : 0 ;
 
+                  if (word.length) {
+                    let q = xod_quads.slice(pi, pi + word.length)
+                    let first_g = q[0]
+                    let last_g = q[q.length-1]
+                    let word_left_x = first_g[0]
+                    let word_right_x = last_g[2]
+                    struct.push([wlength, pi, wlength, word_left_x, word_right_x])
+                  }
+                  pi += wlength + offset
+                }
+                if (words[words.length-1] === '') {
+                  words.pop()
+                }
+                let line_quads = xod_quads.slice(pi - line.length - 1, pi - 1)
+                let line_first_g = line_quads[0]
+                let line_last_g = line_quads[line_quads.length - 1]
+                let line_left_x = line_first_g[0];
+                let line_right_x = line_last_g[2];
+                let line_top = line_first_g[1]
+                let line_bottom = line_first_g[7]
+                var st = [words.length,line.length, line_left_x, line_bottom, line_right_x, line_top]
+                var wt = struct.flat()
+                var _l = st.concat(wt)
+                line_struct = line_struct.concat(_l)
+              }
 
+              var data_struct = [_lines.length].concat(line_struct)
+              // console.log(xod_str);
+              // console.log(data_quads);
+              // console.log(data_struct);
+              var offsets = me._parse_text_offsets(xod_str)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-            var data_struct = [_lines.length].concat(line_struct)
-            // console.log(xod_str);
-            // console.log(data_quads);
-            // console.log(data_struct);
-            var offsets = [];
-            for(let i = 0, len = xod_str.length; i < len; i++) {
-              offsets[i] = (xod_str.charAt(i) === ' ') ? -1 : i ;
-            }
-            var xod_data = {
-              offsets: offsets,
-              quads: xod_quads.flat(),
-              str: xod_str,
-              struct: data_struct
-            }
-
-            // console.log(xod_data);
-            var selInfo = new XODText.SelectionInfo();
-            selInfo.parseFromOld({
-              m_Struct: xod_data['struct'],
-              m_Str: xod_data['str'],
-              m_Offsets: xod_data['offsets'],
-              m_Quads: xod_data['quads'],
-              m_Ready: true
-            });
-            me.correctQuadsForPageRotation(pageIndex, selInfo);
-            me.pages[pageIndex].text = selInfo;
-            me.textCallbacksLookup[pageIndex].forEach(function(completeCB) {
-              exports.utils.log('text', 'Callback ' + pageIndex);
-              completeCB(selInfo);
-            });
-            delete me.textCallbacksLookup[pageIndex];
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-          })
+              var xod_data = {
+                offsets: offsets,
+                quads: xod_quads.flat(),
+                str: xod_str,
+                struct: data_struct
+              }
+              exports.utils.log('loadTextData for page ' + (pageIndex + 1));
+              // console.log(xod_data);
+              var selInfo = new XODText.SelectionInfo();
+              selInfo.parseFromOld({
+                m_Struct: xod_data['struct'],
+                m_Str: xod_data['str'],
+                m_Offsets: xod_data['offsets'],
+                m_Quads: xod_data['quads'],
+                m_Ready: true
+              });
+              me.correctQuadsForPageRotation(pageIndex, selInfo);
+              me.pages[pageIndex].text = selInfo;
+              me.textCallbacksLookup[pageIndex].forEach(function(completeCB) {
+                exports.utils.log('text', 'Callback ' + pageIndex);
+                completeCB(selInfo);
+              });
+              delete me.textCallbacksLookup[pageIndex];
+            })
+        })
         me.textCallbacksLookup[pageIndex] = [onComplete];
       }
     },
-
-
-
-
-
-
-
-    calculate_space_width: function(item, font, page){
-      if (!/\s/.test(item.str)) {
-        return 0;
+    requirePage: function(pageNumber) {
+      if (arguments.length !== 1) {
+        throw new RangeError(arguments.length + " arguments passed into function 'requirePage'. Expected 1 argument. Function Signature: requirePage(number)");
       }
-      let x = item.transform[4];
-      let y = item.transform[5];
-      let width = item.width;
-      let height = item.transform[0];
-      let transform = item.transform.concat()
-      let fontMatrix = (font.data.fontMatrix) ? font.data.fontMatrix : [0.001]
-      let tranformed_xy = page.matrix.mult({x,y})
-      y = tranformed_xy.y
-      let str = item.str;
-      let isSpaceOccured = false;
-      let cMapSpaceWidth = 0;
-      var unicodeMap = {}
-      if (font.data.cMap) {
-        font.data.toUnicode._map.filter(function (el, i) {
-          if (el != null) {
-          	unicodeMap[el] = i;
-          }
-          return el != null;
-        });
+      if (pageNumber instanceof Promise) {
+        throw new TypeError("Received a Promise object in 1st input argument 'requirePage'. Promises require a 'yield' statement before being accessed.");
       }
-      for(let i = 0, len = str.length; i < len; i++) {
-        let widthCode, charWidth, charcode;
-        if (font.data.cMap) {
-          charcode = unicodeMap[str.charAt(i)];
-        } else {
-          charcode = str.charCodeAt(i);
-        }
-        widthCode = charcode;
-
-        charWidth = font.data.widths[widthCode]
-        charWidth = isNum(charWidth) ? charWidth : 1000
-        if (!font.data.cMap && charcode === 32 && charWidth !== 0) {
-          charWidth = 0;
-        }
-
-
-        let charSpacing = 0;
-        let textState = {fontSize: 1, textHScale:1 }
-        let w0 = charWidth * fontMatrix[0];
-        let tx = (w0 * textState.fontSize + charSpacing) *  textState.textHScale;
-        let char_length = transform[0] * tx
-
-        transform[4] = char_length + transform[2] * 0 + transform[4]
-
-        if (!font.data.cMap && charcode === 32) {
-          isSpaceOccured = true;
-        } else if(font.data.cMap && str.charAt(i) === ' ') {
-          isSpaceOccured = true;
-          cMapSpaceWidth = char_length;
-        }
-        // console.log(str.charAt(i),charcode, char_length);
+      if (typeof pageNumber !== 'number') {
+        throw new TypeError("1st input argument '" + pageNumber + "' in function 'requirePage' is of type '" + (typeof pageNumber) + "'. Expected type 'number'. Function Signature: requirePage(number).");
       }
-      let originalWidth = item.width + item.transform[4]
-      let newWidth = transform[4]
-      let calculatedWidth = (originalWidth - newWidth) / (str.split(' ').length - 1)
-      if (!isSpaceOccured) {
-        calculatedWidth = 0;
+      if (pageNumber <= 0) {
+        throw new Error("1st input argument '" + pageNumber + "' in function 'requirePage' is invalid. Expected number between 1 and number of pages in the document.");
       }
-      if (font.data.cMap && isSpaceOccured) {
-        calculatedWidth = cMapSpaceWidth
-      }
-      console.log(item.transform, "width: ", originalWidth)
-      console.log(transform, 'width: ', newWidth);
-      // console.log(originalWidth, newWidth);
-      console.log(str);
-      console.log('Calculated width', calculatedWidth);
-      console.log('\n--------------------------');
-      return calculatedWidth
+      // if (this.hasDownloader) {
+      //   return this.transport.requirePage(this.docId, pageNumber);
+      // }
+
+      return Promise.resolve();
     },
-    charsToGlyphs: function(chars) {
-      var charsCashe = this.charsCache
-      var glyphs, glyph, charcode;
 
-      // if we translated this string before, just grab it from the cache
-      if (charsCache) {
-        glyphs = charsCache[chars];
-        if (glyphs) {
-          return glyphs;
-        }
-      }
 
-      // lazily create the translation cache
-      if (!charsCache) {
-        charsCache = this.charsCache = Object.create(null);
-      }
 
-    },
+
+
+
     _map_font_data: function (_objs) {
       var fonts = {}
       for (var key in _objs) {
@@ -862,22 +730,12 @@
       }
       return fonts;
     },
-
-    _get_quad: function(x, y, width, height, scale) {
-      // var extraButtomSpace = height * 0.23
-      var x1 = x
-      var y1 = (y - height)
-      var x2 = x1 + width
-      var y2 = y1
-      var x3 = x2
-      var y3 = (y1 + height)
-      var x4 = x1
-      var y4 = y3
-      return { x1, y1, x2, y2, x3, y3, x4, y4  }
-    },
-    _debug_ctx: function (ctx, _scale, line_quad, width, height) {
-      ctx.rect(line_quad.x1 * _scale, line_quad.y1* _scale,  width* _scale, height* _scale);
-      ctx.stroke();
+    _parse_text_offsets: function (xod_str) {
+      var offsets = [];
+      for(let i = 0, len = xod_str.length; i < len; i++) {
+        offsets[i] = (xod_str.charAt(i) === ' ') ? -1 : i ;
+      }
+      return offsets;
     },
     _getXYDest: function(pageNumber, destArray) {
       if (!this.pdfDocument) {
@@ -992,12 +850,7 @@
     return typeof v === 'number';
   }
 
-  var RenderingStates = {
-    INITIAL: 0,
-    RUNNING: 1,
-    PAUSED: 2,
-    FINISHED: 3,
-  };
+
 
 
   function getLoadCanvasOptions(pageIndex, zoom, pageRotation, drawComplete, drawProgressive, canvasNum) {
@@ -1053,5 +906,5 @@
     }
     return options;
   }
-  exports.RenderingStates = RenderingStates
+
 })(window);

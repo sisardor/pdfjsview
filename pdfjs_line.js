@@ -11,6 +11,9 @@
       let text = item.str.replace(/\s+/g, " ");
       let transform = item.transform;
       let matrix = opts.pageMatrix;
+      if (!opts.font) {
+        console.error('err');
+      }
       let fontMatrix = (opts.font.fontMatrix) ? opts.font.fontMatrix : [0.001]
       let x = transform[4];
       let y = transform[5];

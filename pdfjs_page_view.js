@@ -10,6 +10,12 @@
     ENABLE: 1,
     ENABLE_ENHANCE: 2
   };
+  var RenderingStates = {
+    INITIAL: 0,
+    RUNNING: 1,
+    PAUSED: 2,
+    FINISHED: 3,
+  };
 
 
   var PDFJSPageView = function PDFJSPageView(options) {
@@ -41,7 +47,7 @@
 
     this.paintTask = null;
     this.paintedViewportMap = new WeakMap();
-    this.renderingState = exports.RenderingStates.INITIAL;
+    this.renderingState = RenderingStates.INITIAL;
     this.resume = null;
     this.error = null;
 
@@ -222,11 +228,11 @@
       var _this = this;
 
       if (!this.pdfPage) {
-        this.renderingState = exports.RenderingStates.FINISHED;
+        this.renderingState = RenderingStates.FINISHED;
         return Promise.reject(new Error('Page is not loaded'));
       }
 
-      this.renderingState = exports.RenderingStates.RUNNING;
+      this.renderingState = RenderingStates.RUNNING;
 
       var pdfPage = this.pdfPage;
 
@@ -267,9 +273,9 @@
       if (this.renderingQueue) {
         renderContinueCallback = function renderContinueCallback(cont) {
           if (!_this.renderingQueue.isHighestPriority(_this)) {
-            _this.renderingState = exports.RenderingStates.PAUSED;
+            _this.renderingState = RenderingStates.PAUSED;
             _this.resume = function() {
-              _this.renderingState = exports.RenderingStates.RUNNING;
+              _this.renderingState = RenderingStates.RUNNING;
               cont();
             };
             return;
@@ -291,7 +297,7 @@
           return Promise.resolve(undefined);
         }
 
-        _this.renderingState = exports.RenderingStates.FINISHED;
+        _this.renderingState = RenderingStates.FINISHED;
 
         // this._resetZoomLayer(/* removeFromDOM = */ true);
 
@@ -417,4 +423,5 @@
   });
 
   exports.PDFJSPageView = PDFJSPageView;
+  exports.RenderingStates = RenderingStates
 })(window);
