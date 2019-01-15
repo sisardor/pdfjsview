@@ -32,7 +32,7 @@
     this.imageResourcesPath = options.imageResourcesPath || '';
     this.renderInteractiveForms = options.renderInteractiveForms || false;
 
-    this.eventBus = options.eventBus || getGlobalEventBus();
+
     this.renderingQueue = options.renderingQueue;
     this.textLayerFactory = options.textLayerFactory;
     this.annotationLayerFactory = options.annotationLayerFactory;
@@ -53,11 +53,7 @@
   };
 
   PDFJSPageView.prototype = $.extend(Object.create(exports.PageInfo.prototype), {
-    // setDocumentViewer: function(docViewer) {
-    //   this._documentViewer = docViewer;
-    //   docViewer.toolModeMap.AnnotationEdit = new function () {}
-    //   docViewer.tool = new function () {}
-    // },
+
     setPdfPage: function setPdfPage(pdfPage) {
       this.pdfPage = pdfPage;
       this.pdfPageRotate = pdfPage.rotate;
@@ -192,11 +188,11 @@
       }
 
       if (renderingState !== RenderingStates.INITIAL) {
-        this.eventBus.dispatch('pagecancelled', {
-          source: this,
-          pageNumber: this.id,
-          renderingState,
-        });
+        // this.eventBus.dispatch('pagecancelled', {
+        //   source: this,
+        //   pageNumber: this.id,
+        //   renderingState,
+        // });
       }
     },
 

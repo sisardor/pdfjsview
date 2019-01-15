@@ -15,46 +15,7 @@
     this.firstRun = true;
     this._pagesRefCache = Object.create(null);
     this.textLayerMode = 1;
-    this.eventBus = getGlobalEventBus(false)
-    this.findController = new exports.PDFFindController({
-      linkService: this,
-      eventBus: this.eventBus
-    });
-
     this.page = 1;
-    var me = this
-    if (document.getElementById('nextSearchResult')) {
-      this.nextSearchResult = document.getElementById('nextSearchResult')
-      this.nextSearchResult.addEventListener('click', function() {
-        console.log('nextSearchResult');
-        me.dispatchEvent('again', false);
-      });
-      this.prevSearchResult = document.getElementById('prevSearchResult')
-      this.prevSearchResult.addEventListener('click', function() {
-        console.log('prevSearchResult');
-        me.dispatchEvent('again', true);
-      });
-      this.caseSensitive = document.getElementById('caseSensitiveSearch')
-      this.caseSensitive.addEventListener('click', function() {
-        me.dispatchEvent();
-      });
-      this.wholeWordSearch = document.getElementById('wholeWordSearch')
-      this.wholeWordSearch.addEventListener('click', function() {
-        me.dispatchEvent('entirewordchange');
-      });
-      this.clearSearchResults = document.getElementById('clearSearchResults')
-      this.clearSearchResults.addEventListener('click', function() {
-        me.eventBus.dispatch('findbarclose');
-      });
-    }
-
-
-    // exports.CoreControls.DocumentViewer.prototype.textSearch = function (fullSearch, onSearchCallback) {
-    //   var pattern = this.currentPattern
-    //   me.textSearch(pattern, fullSearch, onSearchCallback)
-    // }
-
-    console.log(this);
   };
   exports.CoreControls.PDFJSDocument.prototype = Object.create(exports.CoreControls.BaseDocument.prototype);
   exports.CoreControls.PDFJSDocument.prototype.constructor = exports.CoreControls.PDFJSDocument;
@@ -253,8 +214,6 @@
         };
         loadingTask.promise.then(function(pdf) {
           me.pdfDocument = pdf;
-          me.findController.setDocument(pdf)
-          console.log(pdf);
 
           var pagesCount = pdf.numPages;
           var firstPagePromiseX = pdf['getPage'](1);
@@ -378,10 +337,43 @@
       var pageView = me.pages[pageIdx];
       pageRotation = options['getPageRotation']();
       var pageTransform = options['getPageTransform']();
-
+      var MULTIPLIER = exports.utils.getCanvasMultiplier();
       // var canvasMan = exports.CoreControls.CanvasManager.setUpCanvas(pageView,pageZoom,pageRotation,pageTransform, undefined, undefined)
-      // options['drawProgressive'](canvasMan.canvas);
-      // options['drawComplete'](canvasMan.canvas, pageIdx);
+      // var canvas = canvasMan.canvas
+      // var canvas = document.createElement('canvas');
+      //
+      // options['drawProgressive'](canvas);
+      // me.pdfDocument.getPage(pageIdx + 1).then(function(pdfPage) {
+      //   var totalRotation = (pageRotation) % 4 * 90;
+      //   var viewport = pdfPage['getViewport']({
+      //     scale: me.scale * MULTIPLIER,
+      //     rotation: totalRotation
+      //   });
+      //
+      //   var ctx = canvas.getContext('2d');
+      //
+      //   var bufferWidth = viewport.width || 1;
+      //   var bufferHeight = viewport.height || 1;
+      //
+      //   canvas.width = bufferWidth || 1;
+      //   canvas.height = bufferHeight || 1;
+      //   canvas.style.width = Math.floor(viewport.width / MULTIPLIER) + 'px';
+      //   canvas.style.height = Math.floor(viewport.height / MULTIPLIER) + 'px';
+      //
+      //   var renderContext = {
+      //     canvasContext: ctx,
+      //     viewport: viewport,
+      //     enableWebGL: true,
+      //     renderInteractiveForms: true
+      //
+      //   };
+      //   pdfPage.render(renderContext).then(function() {
+      //     options['drawComplete'](canvas, pageIdx);
+      //   })
+      //
+      //
+      // })
+      //
       // return
       var updateScalePromise = new Promise(function(resolve, reject) {
         if (me.scale !== pageZoom || me.rotation !== rotation || me.firstRun) {
@@ -547,7 +539,7 @@
     },
     // 2.828280866222207 correct
     // 2.5454527795999864 wrong
-    'loadTextDataX': function(pageIndex, onComplete) {
+    'loadTextData': function(pageIndex, onComplete) {
       // var c = document.getElementById("page" +(pageIndex + 1));
       // var ctx = c.getContext("2d");
       // ctx.translate(0.5, 0.5)
@@ -771,250 +763,7 @@
 
 
 
-    'loadTextDataX': function(pageIndex, onComplete) {
-      var me = this;
-      if (me.pages[pageIndex].text !== null) {
-        onComplete(me.pages[pageIndex].text);
-      } else if (pageIndex in me.textCallbacksLookup) {
-        me.textCallbacksLookup[pageIndex].push(onComplete);
-      } else {
-        exports.utils.log('text', 'Load text ' + (pageIndex + 1));
-        var pdfPageCache = null;
-        me.pdfDocument.getPage(pageIndex + 1)
-          .then(function(pdfPage) {
-            pdfPageCache = pdfPage
-            return pdfPage.getTextContent({
-              // normalizeWhitespace: true,
-              // combineTextItems: true
-            });
-          })
-          .then(function(textContent) {
-            // "ff": String.fromCharCode(0xFB00),
-            // "fi": String.fromCharCode(0xFB01),
-            // "fl": String.fromCharCode(0xFB02),
-            // "ffi": String.fromCharCode(0xFB03),
-            // "ffl": String.fromCharCode(0xFB04),
-            // "ft": String.fromCharCode(0xFB05),
-            // "st": String.fromCharCode(0xFB06)
-            exports.utils.log('text', 'Text Received ' + pageIndex);
-            console.log(pdfPageCache);
-            var unnormalUnicode = {
-              'f': 317,
-              'i': 240,
-              '\n': 0
-            }
-            // let c = document.getElementById("page1");
-            // let ctx = c.getContext("2d");
-            let MULTIPLIER = exports.utils.getCanvasMultiplier();
-            let scale = 1//MULTIPLIER * me.pages[0].scale
-            let _scale = MULTIPLIER * me.pages[0].scale
-            let line_y = 0
-            var data_quads = []
-            var line_structs = []
-            let xod_struct = ["number_of_lines"]
-            let xod_str = ''
-            let num_of_lines = 0;
-            let number_of_words = 0;
-            let char_pos = 0;
-            let page = me.pages[0];
-            let line_count = 0;
-            let pdfjs_fonts = me._map_font_data(pdfPageCache.commonObjs._objs)
-            for (var j = 0; j < textContent.items.length; j++) {
-              let item = textContent.items[j]
-              let font = pdfjs_fonts[item.fontName]
-              var unicodeMap = {}
-              let xline = item.str
-              font.data.toUnicode._map.filter(function (el, i) {
-                if (el != null) {
-                	unicodeMap[el] = i;
-                }
-                return el != null;
-              });
-              if (font.data.cMap) {
-                font.data.toUnicode._map.filter(function (el, i) {
-                  if (el != null) {
-                    // console.log(el);
-                    switch (el.charCodeAt(0)) {
-                      case 0xFB03:
-                        xline = xline.replace(/ffi/g, String.fromCharCode(0xFB03))
-                        break;
-                      default:
-                        break;
-                    }
-                  	unicodeMap[el] = i;
-                  }
-                  return el != null;
-                });
-              }
-              if (xline == '1.  Introduction') {
-                console.log('BINGO');
-              }
 
-
-
-              let fontMatrix = (font.data.fontMatrix) ? font.data.fontMatrix : [0.001]
-              let _transform = item.transform;
-
-              // if (xline === ' ') continue;
-              line_count++;
-              if (xline.charAt(xline.length-1) === ' ') {
-                xline = xline + '\n' //xline.replace(/.$/,"\n")
-              } else {
-                xline = xline + '\n'
-              }
-
-
-              let x = _transform[4];
-              let y = _transform[5];
-              let width = item.width;
-              let height = _transform[0];
-              let p = page.matrix.mult({x,y})
-              xod_str += xline
-
-              let char_length = width / (xline.length - 1)
-
-              let xWord = ''
-              let word_structs = []
-              let aWord = '';
-              let transform = item.transform.concat()
-              let word_quads = []
-              let w_quad = []
-              let space_width = me.calculate_space_width(item, font, page)
-              for(let i = 0, len = xline.length; i < len; i++) {
-                char_pos++;
-                xWord += xline[i]
-                aWord += xline[i]
-                var charWidth, charcode, widthCode;
-                if (font.data.cMap) {
-                  charcode = unicodeMap[xline.charAt(i)]
-                } else {
-                  charcode = xline.charCodeAt(i);
-                }
-                if (font.data.cMap && !charcode) {
-                  // special case unicode e.g 'ffi'
-
-                }
-
-                widthCode = charcode;
-
-                charWidth = font.data.widths[widthCode]
-                if(!isNum(charWidth)) {
-                  charWidth = unnormalUnicode[xline.charAt(i)]
-                }
-                charWidth = isNum(charWidth) ? charWidth : 0
-
-                  var charSpacing = 0;
-                  var textState = {fontSize: 1, textHScale:1 }
-                  var w0 = charWidth * fontMatrix[0];
-                  var tx = (w0 * textState.fontSize + charSpacing) *  textState.textHScale;
-                  // transform[4] = transform[0] * tx + transform[2] * 0 + transform[4]
-                  char_length = transform[0] * tx
-                  if (tx === 0 ){
-                    char_length = space_width
-                  }
-                  console.log(xline.charAt(i), char_length);
-
-                let char_x = transform[4]//x + (char_length * i)
-                // console.log(xline[i], char_length, transform);
-                var char_quad = me._get_quad(char_x, p.y, char_length, height, scale)
-                var q = [char_quad.x1, char_quad.y1, char_quad.x2, char_quad.y2 ,char_quad.x3, char_quad.y3, char_quad.x4, char_quad.y4]
-                // data_quads = data_quads.concat(q)
-                w_quad = w_quad.concat(q)
-
-
-
-                // console.log(xline[i],char_pos,  q[0], q[1]);
-
-                if (xline[i] === ' ') {
-                  // aWord = aWord.trim()
-                  // console.log(xWord, '|', aWord, char_x, char_quad.x2);
-                  var offset = (aWord.length - 1 === 0) ? 0 : 1
-
-                  let p0 = aWord.length - offset;
-                  let p1 = char_pos - aWord.length;
-                  let p2 = aWord.length - offset;
-                  // let p3 = char_quad.x1 - (char_length  * (aWord.length - offset));
-                  // let p4 = char_quad.x2 - char_length;
-                  let p3 = w_quad[0]//char_quad.x1 - (char_length  * (aWord.length - offset));
-                  let p4 = w_quad[w_quad.length - 1 - 7]//char_quad.x2 - char_length;
-                  var w_struct = [p0, p1, p2, p3, p4]
-                  console.log(aWord, w_struct);
-                  word_structs = word_structs.concat(w_struct)
-                  aWord = ''
-                  data_quads = data_quads.concat(w_quad)
-                  w_quad = []
-                } else if (xline[i] === '\n') {
-
-                  // aWord = aWord.trim()
-                  // console.log(xWord, '|', aWord, char_x, char_quad.x2);
-                  var offset = (aWord.length - 1 === 0) ? 0 : 1
-                  let p0 = aWord.length - offset
-                  let p1 = char_pos - aWord.length;
-                  let p2 = aWord.length - offset
-                  let p3 = w_quad[0]//char_quad.x1 - (char_length  * (aWord.length - offset));
-                  let p4 = w_quad[w_quad.length - 1 - 7]//char_quad.x2 - char_length;
-                  var w_struct = [p0, p1, p2, p3, p4]
-                  console.log(aWord, w_struct);
-                  word_structs = word_structs.concat(w_struct)
-                  aWord = ''
-                  data_quads = data_quads.concat(w_quad)
-                  w_quad = []
-                }
-
-                transform[4] = char_length + transform[2] * 0 + transform[4]
-              }
-              // console.log(word_structs);
-              let line_quad = me._get_quad(x, p.y, width, height)
-              let _0 = 0;
-              let _1 = xline.split(' ').length;
-              let _2 = xline.length;
-              let _3 = line_quad.x1;
-              let _4 = line_quad.y3;
-              let _5 = line_quad.x2;
-              let _6 = line_quad.y1;
-              let l_struct = [_1, _2, _3, _4, _5, _6];
-              line_structs = line_structs.concat(l_struct).concat(word_structs)//data_struct.concat([_1, _2, _3, _4, _5, _6])
-            }
-
-            var data_struct = [line_count].concat(line_structs)
-            // console.log(xod_str);
-            // console.log(data_quads);
-            // console.log(data_struct);
-            var offsets = [];
-            var reducer = (arr, char, i) => {
-              var dict = { '\n': -2, ' ': -1 }
-              arr[i] = dict[char] || i;
-              return arr;
-            }
-            xod_str.split('').reduce(reducer, offsets)
-            var xod_data = {
-              offsets: offsets,
-              quads: data_quads,
-              str: xod_str,
-              struct: data_struct
-            }
-            console.log(xod_data);
-            var selInfo = new XODText.SelectionInfo();
-            selInfo.parseFromOld({
-              m_Struct: xod_data['struct'],
-              m_Str: xod_data['str'],
-              m_Offsets: xod_data['offsets'],
-              m_Quads: xod_data['quads'],
-              m_Ready: true
-            });
-            me.correctQuadsForPageRotation(pageIndex, selInfo);
-            me.pages[pageIndex].text = selInfo;
-            me.textCallbacksLookup[pageIndex].forEach(function(completeCB) {
-              exports.utils.log('text', 'Callback ' + pageIndex);
-              completeCB(selInfo);
-            });
-            delete me.textCallbacksLookup[pageIndex];
-            return
-
-          })
-        me.textCallbacksLookup[pageIndex] = [onComplete];
-      }
-    },
     calculate_space_width: function(item, font, page){
       if (!/\s/.test(item.str)) {
         return 0;
@@ -1236,66 +985,7 @@
       var refStr = pageRef.num + ' ' + pageRef.gen + ' R';
       return this._pagesRefCache && this._pagesRefCache[refStr] || null;
     },
-    createAnnotationLayerBuilder: function(pdfPage) {
-      var renderInteractiveForms = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
-      return new exports.PDFJSAnnotationLayerBuilder({
-        pdfPage: pdfPage,
-        renderInteractiveForms: renderInteractiveForms,
-      });
-    },
-    createTextLayerBuilder: function(textLayerDiv, pageIndex, viewport) {
-      var enhanceTextSelection = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : false;
-      return new exports.PDFJSTextLayerBuilder({
-        textLayerDiv: textLayerDiv,
-        eventBus: this.eventBus,
-        doc: this,
-        pageIndex: pageIndex,
-        viewport: viewport,
-        findController: this.findController,
-        enhanceTextSelection: false
-      });
-    },
-    textSearch: function searchText(pattern, fullSearch, onSearchCallback) {
-      this.pattern = pattern
-      this.findController.executeCommand('find', {
-        query: pattern,
-        phraseSearch: true,
-        caseSensitive: this.caseSensitive.checked,
-        entireWord: this.wholeWordSearch.checked,
-        highlightAll: true,
-        findPrevious: undefined,
-      })
-    },
-    findNextButton: function findNextButton() {
 
-    },
-    findPreviousButton: function findPreviousButton() {
-
-    },
-    dispatchEvent2: function(type, findPrev) {
-      this.findController.executeCommand('find', {
-        source: this,
-        type: type,
-        query: this.pattern,
-        phraseSearch: true,
-        caseSensitive: this.caseSensitive.checked,
-        entireWord: this.wholeWordSearch.checked,
-        highlightAll: true,
-        findPrevious: findPrev,
-      });
-    },
-    dispatchEvent: function(type, findPrev) {
-      this.findController.executeCommand('find' + type, {
-        // source: this,
-        type: type,
-        query: this.pattern,//this.findField.value,
-        phraseSearch: true,
-        caseSensitive: this.caseSensitive.checked,
-        entireWord: this.wholeWordSearch.checked,
-        highlightAll: true, //this.highlightAll.checked,
-        findPrevious: findPrev,
-      });
-    }
   });
 
   function isNum(v) {
@@ -1308,82 +998,8 @@
     PAUSED: 2,
     FINISHED: 3,
   };
-  var EventBus = function EventBus() {
-    var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-        _ref$dispatchToDOM = _ref.dispatchToDOM,
-        dispatchToDOM = _ref$dispatchToDOM === undefined ? false : _ref$dispatchToDOM;
 
-    this._listeners = Object.create(null);
-    this._dispatchToDOM = dispatchToDOM === true;
-  }
-  EventBus.prototype = {
-    on: function on(eventName, listener) {
-      var eventListeners = this._listeners[eventName];
-      if (!eventListeners) {
-        eventListeners = [];
-        this._listeners[eventName] = eventListeners;
-      }
-      eventListeners.push(listener);
-    },
-    off: function off(eventName, listener) {
-      var eventListeners = this._listeners[eventName];
-      var i = void 0;
-      if (!eventListeners || (i = eventListeners.indexOf(listener)) < 0) {
-        return;
-      }
-      eventListeners.splice(i, 1);
-    },
-    dispatch: function dispatch(eventName) {
-      var eventListeners = this._listeners[eventName];
-      if (!eventListeners || eventListeners.length === 0) {
-        if (this._dispatchToDOM) {
-          var _args = Array.prototype.slice.call(arguments, 1);
-          this._dispatchDOMEvent(eventName, _args);
-        }
-        return;
-      }
-      // Passing all arguments after the eventName to the listeners.
-      var args = Array.prototype.slice.call(arguments, 1);
-      // Making copy of the listeners array in case if it will be modified
-      // during dispatch.
-      eventListeners.slice(0).forEach(function (listener) {
-        listener.apply(null, args);
-      });
-      if (this._dispatchToDOM) {
-        this._dispatchDOMEvent(eventName, args);
-      }
-    },
-    _dispatchDOMEvent: function _dispatchDOMEvent(eventName) {
-      var args = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
 
-      var details = Object.create(null);
-      if (args && args.length > 0) {
-        var obj = args[0];
-        for (var key in obj) {
-          var value = obj[key];
-          if (key === 'source') {
-            if (value === window || value === document) {
-              return; // No need to re-dispatch (already) global events.
-            }
-            continue; // Ignore the `source` property.
-          }
-          details[key] = value;
-        }
-      }
-      var event = document.createEvent('CustomEvent');
-      event.initCustomEvent(eventName, true, true, details);
-      document.dispatchEvent(event);
-    }
-  }
-  var globalEventBus = null;
-  function getGlobalEventBus() {
-    var dispatchToDOM = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : false;
-
-    if (!globalEventBus) {
-      globalEventBus = new EventBus({ dispatchToDOM: dispatchToDOM });
-    }
-    return globalEventBus;
-  }
   function getLoadCanvasOptions(pageIndex, zoom, pageRotation, drawComplete, drawProgressive, canvasNum) {
     var options = {
       'getZoom': function getZoom() {
@@ -1438,5 +1054,4 @@
     return options;
   }
   exports.RenderingStates = RenderingStates
-  exports.getGlobalEventBus = getGlobalEventBus;
 })(window);
