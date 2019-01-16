@@ -1,29 +1,28 @@
 (function(exports) {
   'use strict';
+
   function isNum(v) {
     return typeof v === 'number';
   }
 
   class Line {
     constructor(opts) {
-      // console.log(opts.item);
       let item = opts.item;
       let text = item.str.replace(/\s+/g, " ");
       let transform = item.transform;
       let matrix = opts.pageMatrix;
-      if (!opts.font) {
-        console.error('err');
-      }
-      let fontMatrix = (opts.font.fontMatrix) ? opts.font.fontMatrix : [0.001]
+
+      // fontMatrix is used when calculating char width
+      let fontMatrix = (opts.font.data.fontMatrix) ? opts.font.data.fontMatrix : [0.001]
       let x = transform[4];
       let y = transform[5];
       let width = item.width;
       let height = transform[0];
-      let coord = matrix.mult({x,y})
+      let coord = matrix.mult({x,y}) // convert to webview coordinates
       x = this.parseNum(coord.x);
       y = this.parseNum(coord.y)
 
-      // bottom offset %23
+      // bottom offset %20
       this._bottom_offset =  0.20
 
       let left_x = x;
@@ -50,6 +49,9 @@
 
       this._textMatrix = item.transform.concat();
       this._textLineMatrix = item.transform.concat()
+
+      // this map maybe used some cases when unicode is not available
+      // it allow to lookup unicdoe with character string
       let unicodeMap = {}
       this._font.toUnicode._map.filter(function (el, i) {
         if (el != null) {
@@ -59,14 +61,14 @@
       });
       this._unicodeMap = unicodeMap
     }
-    run() {
+
+    parse() {
       // if (this.text === 'fi') {
       //   debugger
       // }
       let isThereSpace = false;
       if (/\s/.test(this.text)) {
         // found space width
-        // console.warn('space');
         isThereSpace = true;
       }
       let space_indexes = []
@@ -80,7 +82,6 @@
           toUnicode: this._font.toUnicode,
           fontMatrix: fontMatrix,
           lineHeight: this._height,
-          // unicodeMap: this._unicodeMap,
         }
         let g = new Glyph(opt);
 
@@ -90,6 +91,7 @@
             g.setCharLength(0)
             space_indexes.push(index)
           }
+
           else if(!g.isSpace && isNum(g.unicode) && isNaN(g.char_length)) {
             g.setCharLength(0)
           }
@@ -108,6 +110,9 @@
         this._textMatrix[4] = g.char_length + this._textMatrix[2] * 0 + this._textMatrix[4]
         return g
       })
+
+      // if this text contained space and space with info not available
+      // calculate width and update glyph of type space
       if (isThereSpace && !this._font.cMap) {
         let originalWidth = this.left_x + this._width;
         let newWidth = this._textMatrix[4]
@@ -121,9 +126,9 @@
         }
       }
 
+      // calculate each character's quad and save it to this.quads
       let transform = this._textLineMatrix.concat()
       let quads = glyphs.map((glyph, index) => {
-        // console.log(glyph);
         let left_x = transform[4];
         let right_x = left_x + glyph.char_length;
         let top = this.top;
@@ -147,48 +152,15 @@
       this.glyphs = glyphs
       this.quads = quads
     }
+
     getQuads() {
       return this.quads;
     }
-    getStructs() {
-      // var temp = `WebViewer`
-      let lines = this.text.split('\n')
-      let pivot = 0
-      let pi = 0
-      var struct = []
-      // console.log(lines)
-      for (let i = 0, len = lines.length; i < len; i++) {
-        let line = lines[i]
-        let lastIndex = pivot + line.length
-        pivot += line.length + 1
-        let words = line.split(' ')
-        for (let j = 0, len2 = words.length; j < len2; j++) {
-          let word = words[j]
-          let wlength = (word.length) ? word.length : 1 ;
-          var offset = (word.length) ? 1 : 0 ;
 
-          if (word.length) {
-            struct.push([wlength, pi, wlength, 'x', 'y'])
-          }
-          pi += wlength + offset
-        }
-      }
-      var line = []
-      // console.log(struct)
-      return struct
-    }
-    calculateSpaceWidth() {
-
-    }
     parseNum(num) {
       return parseFloat(num.toFixed(4))
     }
-    setTop (top) {
-        this.top = top;
-    }
-    setBottom (bottom) {
-        this.bottom = bottom;
-    }
+
     addNewline() {
       if (!this.text.endsWith('\n')) {
         this.text += '\n';
@@ -204,7 +176,6 @@
       ctx.stroke()
       return;
     }
-
   }
 
   class Glyph {
@@ -229,16 +200,21 @@
         this.unicode = this.char.charCodeAt(0);
       }
 
+      // if newline '\n' set width to 0 and return
       if (this.unicode === 0x0A || this.char ===  String.fromCharCode(0x0A)) {
         // this is newline unicode
         this.width = 0;
         this.unicode = this.char.charCodeAt(0);
         this.char_length = 0;
         return
-      } else if(this.char.charCodeAt(0) === 0x20) {
+      }
+      // if space glyph
+      else if(this.char.charCodeAt(0) === 0x20) {
         // this is space
         this.width = widths[this.unicode]
-      } else {
+      }
+      // other characters
+      else {
         this.width = widths[this.unicode]
         if (this.width == null && toUnicode._map.contains(this.char)){
           this.unicode = toUnicode._map.findIndex(char => char === this.char)
@@ -247,19 +223,21 @@
       }
 
       if (this.isSpace && (this.width == null || this.width === 0)) {
+        // character width will be calculated and set later
         // console.error(this.char, 'is null  or 0 width')
       } else {
+
+        // calculate character width
         var tx = 0;
         var ty = 0;
         let charSpacing = 0;
-        let textState = {fontSize: 1, textHScale:1 }
+        let textState = {fontSize: 1, textHScale: 1}
         let w0 = this.width * fontMatrix[0];
         tx = (w0 * textState.fontSize + charSpacing) *  textState.textHScale;
 
         this.char_length = lineHeight * tx
       }
     }
-
     get isSpace() {
       return this.char.charCodeAt(0) === 0x20
     }

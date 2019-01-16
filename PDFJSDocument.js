@@ -22,311 +22,82 @@
   exports.CoreControls.Document.registerDocumentType('pdfjs', exports.CoreControls.PDFJSDocument);
 
   $.extend(exports.CoreControls.PDFJSDocument.prototype, {
-    getLinearizedURLSize: function getLinearizedURLSize(downloadInfo) {
-      function arrayIndexOf(arr, toMatch, responsePos) {
-        var arrLength = arr.length;
-        for (var i = responsePos; i < arrLength; ++i) {
-          if (arr[i] === toMatch) {
-            return i;
-          }
-        }
-        return -1;
-      }
-
-      var capability = createPromiseCapability();
-      var xmlhttp = new XMLHttpRequest();
-      xmlhttp.open('GET', downloadInfo.url);
-
-      var customHeaders = downloadInfo['customHeaders'];
-      if (customHeaders) {
-        // set custom headers
-        for (var header in customHeaders) {
-          xmlhttp.setRequestHeader(header, customHeaders[header]);
-        }
-      }
-
-      xmlhttp.setRequestHeader('Range', ['bytes=', 1, '-', 150].join(''));
-      xmlhttp.responseType = 'arraybuffer';
-      xmlhttp.onreadystatechange = function() {
-        if (this.readyState === this.DONE) {
-          var length = xmlhttp.response.byteLength;
-          if (xmlhttp.status !== 206 && xmlhttp.status !== 200) {
-            capability.reject({
-              message: 'Received http error code ' + xmlhttp.status
-            });
-          } else if (length !== 150) {
-            capability.reject({
-              message: 'Byte ranges are not supported by the server.',
-              data: new Uint8Array(xmlhttp.response)
-            });
-          }
-          var response = new Uint8Array(xmlhttp.response);
-
-          var toMatch = [76, 105, 110, 101, 97, 114, 105, 122, 101, 100];
-
-          var contentRange = xmlhttp.getResponseHeader('Content-Range') || xmlhttp.getResponseHeader('content-range');
-
-          if (contentRange) {
-            // parse the content range to get the length of the file
-            var fileLength = contentRange.split('/')[1];
-
-            var responsePos = 0;
-            do {
-              responsePos = arrayIndexOf(response, toMatch[0], responsePos) + 1;
-              for (var toMatchPos = 1; toMatchPos < 10; ++toMatchPos) {
-                if (response[responsePos] === toMatch[toMatchPos]) {
-                  ++responsePos;
-                } else {
-                  break;
-                }
-              }
-              if (toMatchPos === 10) {
-                // this file is most likely linearized
-                capability.resolve(parseInt(fileLength, 10));
-                return;
-              }
-            } while (responsePos !== 0);
-            capability.reject({
-              message: 'The file is not linearized.'
-            });
-          } else {
-            capability.reject({
-              message: 'Could not retrieve Content-Range header.'
-            });
-          }
-        }
-      };
-      xmlhttp.onerror = function() {
-        capability.reject({
-          message: 'Network or Cross Domain Access Error.'
-        });
-      };
-      xmlhttp.send();
-      return capability.promise;
-    },
-    loadAsync: function PDFJSDocumentLoadAsync(partRetriever, onDocumentLoaded, options) {
-
+    loadAsync: function functionName(partRetriever, onDocumentLoaded, options) {
+      var me = this;
       var getUserPassword = options['getPassword'];
-      // console.log('loadAsync', partRetriever);
       var extension = options['extension'];
       var defaultPageSize = options['defaultPageSize'];
       var pageSizes = options['pageSizes'];
-
-      var me = this;
-      var haveFileData = function haveFileData(source) {
-        me.pages = [];
-        me.bind('documentReady', onDocumentLoaded);
-        var docMessageKey, docMessageValue;
-
-        var resourceFileLoaded = function resourceFileLoaded() {
-          var sourceIsURL = typeof source === 'object' && 'url' in source; {
-            // if we are using emscripten make sure we use the file if available
-            if (file && isFile(file) && me.transport && me.transport.getWorkerType() === 'ems') {
-              docMessageKey = 'file';
-              docMessageValue = file;
-            } else if (sourceIsURL) {
-              docMessageKey = 'url';
-              docMessageValue = source;
-              me.hasDownloader = true;
-            } else if (typeof source === 'string') {
-              docMessageKey = 'filepath';
-              docMessageValue = source;
-            } else if (isArrayBuffer(source)) {
-              docMessageKey = 'array';
-              docMessageValue = source.buffer;
-            } else if (typeof source === 'object' && 'type' in source && source.type === 'id') {
-              // existing document
-              docMessageKey = 'id';
-              docMessageValue = source.id;
-            } else {
-              console.warn('Invalid parameter in getDocument, need either Uint8Array, ' + 'string or a parameter object');
-            }
-            var docData = {
-              'type': docMessageKey,
-              'value': docMessageValue,
-              'extension': extension,
-              'defaultPageSize': defaultPageSize,
-              'pageSizes': pageSizes
-            };
-            fetchDocument(docData);
-          }
-        };
-
-        resourceFileLoaded();
-      };
-
-      function incrementalDownloadWarning(url, reason) {
-        console.warn('Could not use incremental download for url ' + url + '. Reason: ' + reason);
-      }
-
-      var isCrossDomainRequest = function isCrossDomainRequest(url) {
-        return url.indexOf(window.parent.location.hostname) === -1;
-      };
-
       var file = partRetriever.getFile();
-      // if we are on Chrome we will assume that this is going to need buffer data (because it will likely use PNaCl)
 
-      if (exports.utils.isJSWorker && exports.jsworker) {
-        file = exports.jsworker.worker.getPlatformFormatFilePath(file);
-        haveFileData(file);
-      } else if (file && file.url) {
-        // file containing url is checked
 
-        this.getLinearizedURLSize(file).then(function(size) {
-          file.size = size;
-          file['withCredentials'] = isCrossDomainRequest(file.url) ? partRetriever['withCredentials'] : true;
-          haveFileData(file);
-        }, function(error) {
-          incrementalDownloadWarning(file.url, error.message);
-          if (error.data) {
-            haveFileData(error.data);
-          } else {
-            partRetriever.getFileData(haveFileData);
-          }
-        });
-      } else if (file && !exports.utils.isChrome) {
-        // check if file is a javascript File object
-        haveFileData(file);
+      if (file && file.url) {
+        fetchDocument(file.url);
       } else {
-        partRetriever.getFileData(haveFileData);
+        partRetriever.getFileData(function(source) {
+          fetchDocument({ data: source });
+        });
       }
 
-      function isArrayBuffer(v) {
-        return typeof v === 'object' && v !== null && v.byteLength !== undefined;
-      }
+      function fetchDocument(params) {
+        var loadingTask = pdfjsLib.getDocument(params);
 
-      function isFile(v) {
-        // need to check the toString representation to work around cross window issues, i.e. window.File !== window.top.File (except on Firefox for some reason!)
-        // http://tobyho.com/2011/01/28/checking-types-in-javascript/
-        var objectToString = Object.prototype.toString.call(v);
-        return typeof v === 'object' && v !== null && (objectToString === '[object File]' || objectToString === '[object Blob]');
-      }
-
-
-      function fetchDocument(docData) {
-        var pageDimensions = {}
-
-        var loadingTask = pdfjsLib.getDocument({ data: docData.value});
-
-        loadingTask.onPassword = function(updateCallback, reason) {
-          console.log('onPassword');
+        // handle passpord prompt
+        loadingTask.onPassword = (updateCallback, reason) => {
           getUserPassword(updateCallback)
         };
+
         loadingTask.promise.then(function(pdf) {
           me.pdfDocument = pdf;
+          var pageCount = pdf.numPages;
 
-          var pagesCount = pdf.numPages;
-          var firstPagePromiseX = pdf['getPage'](1);
-          var multiplier = exports.utils.getCanvasMultiplier();
-          firstPagePromiseX.then(function(pdfPage) {
-            var pageCount = pdf.numPages;
-            var pagesCapability = createPromiseCapability();
-            me.pagesPromise = pagesCapability.promise;
-            pagesCapability.promise.then(function() {
-              me._pageViewsReady = true;
+          // this promise will resolve itself when
+          // "for loop" is finished
+          var pagesCapability = createPromiseCapability();
+          pagesCapability.promise.then(function() {
 
-              // if (!me.pagesHaveBeenUpdated) {
-              //   console.log(pageDimensions);
-              //   me.applyPagesUpdated({
-              //     'pageDimensions': pageDimensions
-              //   });
-              // }
-
-              onDocumentLoaded();
-              me.trigger('documentComplete');
-            });
-
-            var isOnePageRenderedResolved = false;
-            var onePageRenderedCapability = createPromiseCapability();
-            me.onePageRendered = onePageRenderedCapability.promise;
-
-            var firstPagePromise = pdf['getPage'](1);
-            me.firstPagePromise = firstPagePromise;
-
-
-            firstPagePromise.then(function(pdfPage) {
-              for (var pageNum = 1; pageNum <= pagesCount; ++pageNum) {
-                var viewport = pdfPage['getViewport']({ scale: me.scale });
-                var pageDimension = {
-                  height: viewport.height,
-                  id: pageNum,//'pdf-page-' + pdfPage.pageIndex,
-                  matrix: viewport.transform,
-                  rotation: viewport.rotation,
-                  width: viewport.width
-                }
-                pageDimensions[pageNum] = pageDimension
-                var pageView = new exports.PDFJSPageView({
-                  container: null,
-                  id: pageNum,
-                  matrix: me.sanitisePageMatrix(viewport.transform, { w: viewport.width, h: viewport.height }),
-                  scale: me.scale,
-                  renderingQueue: me.renderingQueue,
-                  defaultViewport: viewport.clone(),
-                  // annotationLayerFactory: me,
-                  // textLayerFactory: me,
-                  // textLayerMode: me.textLayerMode,
-                  eventBus: me.eventBus
-                });
-                me.pages.push(pageView);
-                me.pagesById[pageNum] = pageView;
-
-                var thumbnail = new exports.PDFJSThumbnailView({
-                  container: null,
-                  id: pageNum,
-                  defaultViewport: viewport.clone(),
-                  disableCanvasToImageConversion: false
-                });
-                me._thumbnails.push(thumbnail);
-
-              }
-              onePageRenderedCapability.resolve();
-            });
-
-            onePageRenderedCapability.promise.then(function() {
-              if (pdf['loadingParams']['disabledAutoFetch']) {
-                pagesCapability.resolve();
-                return;
-              }
-              var getPagesLeft = pagesCount;
-
-              var _loop = function _loop(pageNum) {
-                pdf['getPage'](pageNum).then(function(pdfPage) {
-
-                  var _viewport = pdfPage['getViewport']({ scale: me.scale });
-                  var _pageDimension = {
-                    height: _viewport.height,
-                    id: pageNum,//'pdf-page-' + pdfPage.pageIndex,
-                    matrix: _viewport.transform,
-                    rotation: _viewport.rotation,
-                    width: _viewport.width
-                  }
-                  pageDimensions[pageNum] = _pageDimension
-                  var pageView = me.pages[pageNum - 1];
-                  if (!pageView.pdfPage) {
-                    pageView.setPdfPage(pdfPage);
-                  }
-                  me._cachePageRef(pageNum, pdfPage.ref);
-                  if (--getPagesLeft === 0) {
-                    pagesCapability.resolve();
-                  }
-                }, function(err) {
-                  console.error(err);
-                  if (--getPagesLeft === 0) {
-                    pagesCapability.resolve();
-                  }
-                });
-              };
-
-              for (var pageNum = 1; pageNum <= pageCount; ++pageNum) {
-                _loop(pageNum);
-              }
-            });
+            // callback is called after pdf pages class is created
+            onDocumentLoaded();
+            me.trigger('documentComplete');
           });
-        });
+
+          var getPagesLeft = pageCount;
+
+          var _loop = function _loop(pageNum) {
+            pdf['getPage'](pageNum).then(function(pdfPage) {
+              var viewport = pdfPage['getViewport']({ scale: me.scale });
+              var pageView = new exports.PDFJSPageView({
+                id: pageNum,
+                matrix: me.sanitisePageMatrix(viewport.transform, { w: viewport.width, h: viewport.height }),
+                scale: me.scale,
+                defaultViewport: viewport.clone()
+              });
+              pageView.setPdfPage(pdfPage);
+
+              me.pages.push(pageView);
+              me.pagesById[pageNum] = pageView;
+
+              me._cachePageRef(pageNum, pdfPage.ref);
+              if (--getPagesLeft === 0) {
+                pagesCapability.resolve();
+              }
+            }, function(err) {
+              console.error(err);
+              if (--getPagesLeft === 0) {
+                pagesCapability.resolve();
+              }
+            });
+          };
+
+          for (var pageNum = 1; pageNum <= pageCount; ++pageNum) {
+            _loop(pageNum);
+          }
+        })
       }
     },
-    loadCanvasAsync: function PDFJSDocumentLoadCanvasAsync(pageIndex, zoom, pageRotation, drawComplete, drawProgressive, canvasNum) {
 
+
+    loadCanvasAsync: function PDFJSDocumentLoadCanvasAsync(pageIndex, zoom, pageRotation, drawComplete, drawProgressive, canvasNum) {
       var me = this;
       var options = getLoadCanvasOptions(pageIndex, zoom, pageRotation, drawComplete, drawProgressive, canvasNum);
 
@@ -337,67 +108,12 @@
       var pageView = me.pages[pageIdx];
       pageRotation = options['getPageRotation']();
       var pageTransform = options['getPageTransform']();
-      var MULTIPLIER = exports.utils.getCanvasMultiplier();
-      // var canvasMan = exports.CoreControls.CanvasManager.setUpCanvas(pageView,pageZoom,pageRotation,pageTransform, undefined, undefined)
-      // var canvas = canvasMan.canvas
-      // var canvas = document.createElement('canvas');
-      //
-      // options['drawProgressive'](canvas);
-      // me.pdfDocument.getPage(pageIdx + 1).then(function(pdfPage) {
-      //   var totalRotation = (pageRotation) % 4 * 90;
-      //   var viewport = pdfPage['getViewport']({
-      //     scale: me.scale * MULTIPLIER,
-      //     rotation: totalRotation
-      //   });
-      //
-      //   var ctx = canvas.getContext('2d');
-      //
-      //   var bufferWidth = viewport.width || 1;
-      //   var bufferHeight = viewport.height || 1;
-      //
-      //   canvas.width = bufferWidth || 1;
-      //   canvas.height = bufferHeight || 1;
-      //   canvas.style.width = Math.floor(viewport.width / MULTIPLIER) + 'px';
-      //   canvas.style.height = Math.floor(viewport.height / MULTIPLIER) + 'px';
-      //
-      //   var renderContext = {
-      //     canvasContext: ctx,
-      //     viewport: viewport,
-      //     enableWebGL: true,
-      //     renderInteractiveForms: true
-      //
-      //   };
-      //   pdfPage.render(renderContext).then(function() {
-      //     options['drawComplete'](canvas, pageIdx);
-      //   })
-      //
-      //
-      // })
-      //
-      // return
-      var updateScalePromise = new Promise(function(resolve, reject) {
-        if (me.scale !== pageZoom || me.rotation !== rotation || me.firstRun) {
-          me.scale = pageZoom;
-          me.firstRun = false;
-          me.rotation = rotation;
-          for (var i = 0, ii = me.pages.length; i < ii; i++) {
-            me.pages[i].update(pageZoom, rotation);
-          }
-          resolve(undefined);
-        } else {
-          resolve(undefined);
-        }
-      });
 
-      updateScalePromise.then(function(value) {
-        me._ensurePdfPageLoaded(pageView).then(function() {
-          pageView.draw().promise.then(function(result) {
-            options['drawProgressive'](result);
-            options['drawComplete'](result, pageIdx);
-          }, function(err) {
-            console.error(err);
-          });
-        });
+      pageView.paintOnCanvas(pageZoom, rotation).promise.then(function(result) {
+        options['drawProgressive'](result);
+        options['drawComplete'](result, pageIdx);
+      }, function(err) {
+        console.error(err);
       });
     },
     getBookmarks: function getBookmarks() {
@@ -413,7 +129,8 @@
 
         if (destRef instanceof Object) {
           var name = outline.title
-          var pageNumber = me._cachedPageNumber(destRef);
+          var pageNumber = me._getNumberFromRef(destRef);
+          // _getXYDest function will parse "dest" data passed by pdfjs
           var xy = me._getXYDest(pageNumber, outline.dest);
           var parent = undefined;
           var verticalOffset = xy.verticalOffset;
@@ -445,11 +162,34 @@
         return bookmarks;
       });
     },
-    loadThumbnailAsync: function PDFJSDocumentLoadThumbnailAsync(pageNum, onLoadThumbnail, name) {
-      var thumbnailView = this._thumbnails[pageNum];
-      this._ensurePdfPageLoaded(thumbnailView).then(function() {
-        thumbnailView.draw().then(onLoadThumbnail)
-      })
+    loadThumbnailAsync: function PDFDocumentLoadThumbnailAsync(pageNumber, onLoadThumbnail, name) {
+      var highResThumbnail = name === 'page';
+
+      var me = this;
+      var page = me.pages[pageNumber];
+      var multiplier = exports.utils.getCanvasMultiplier();
+      var thumbSize = highResThumbnail ? 2000.0 : 150.0 * multiplier;
+      var zoomVal = page.width > page.height ? thumbSize / page.width : thumbSize / page.height;
+      zoomVal /= multiplier;
+      // No thumbnails so render it and send back image
+
+      return this['loadCanvasAsync']({
+        'pageIndex': pageNumber,
+        'getZoom': function() {
+          return zoomVal;
+        },
+        'getPageRotation': function() {
+          return exports.CoreControls.PageRotation.e_0;
+        },
+        'drawComplete': function(canvas) {
+          onLoadThumbnail(canvas);
+        },
+        'drawProgressive': function() {
+
+        },
+        'useProgress': false,
+        'pageCanvas': true
+      });
     },
     getPageCount: function PDFJSDocumentGetPageCount() {
       return this.pages.length;
@@ -462,67 +202,6 @@
         return Promise.reject('not supported')
       }
       return this.pdfDocument.getData()
-    },
-    applyPagesUpdated: function(data) {
-      var me = this;
-
-      me.pagesHaveBeenUpdated = true;
-      data = data['pageDimensions'];
-      var keys = Object.keys(data);
-
-      var pages = this.pages;
-      var oldText = new Array(pages.length);
-      for (var i = 0; i < pages.length; ++i) {
-        var page = pages[i];
-        if (page.text) {
-          oldText[i] = page.text;
-        }
-      }
-      this.pages.length = 0;
-      var pagesById = this.pagesById;
-
-      var specialUpdates = [];
-      var updatedPageIdSet = {};
-      keys.forEach(function(pageNum) {
-        var dat = data[pageNum];
-        var contentChanged = !!dat['contentChanged'];
-        dat = {
-          'width': dat['width'],
-          'height': dat['height'],
-          'matrix': me.sanitisePageMatrix(dat['matrix'], { w: dat['width'], h: dat['height'] }),
-          'rotation': 90 * dat['rotation'],
-          'id': dat['id'],
-          'pageNum': pageNum,
-          'contentChanged': contentChanged // consumed by the viewer
-        };
-        if (pagesById[dat['id']]) {
-          specialUpdates.push({ 'before': pagesById[dat['id']], 'after': dat });
-        }
-        pagesById[dat['id']] = new PageInfo(dat['width'], dat['height']);
-        var page = pagesById[dat['id']];
-        page.setFromPageData(dat);
-
-        // avoid losing the text when this entry is updated
-        if (!contentChanged) {
-          var textEntry = oldText[pageNum - 1];
-          if (textEntry) {
-            page.text = textEntry;
-          }
-        }
-        pages[pageNum - 1] = page;
-
-        updatedPageIdSet[dat['id']] = true;
-      });
-
-      this.maxViewportZoom = this.calculateMaxViewportZoom();
-
-      // If a page ID is not updated, delete it
-      Object.keys(pagesById).forEach(function(currentPageId) {
-        if (!(currentPageId in updatedPageIdSet)) {
-          delete pagesById[currentPageId];
-        }
-      });
-      return specialUpdates;
     },
     sanitisePageMatrix: function(matrix, currentPage) {
       // Rectify the page matrix so it keeos scaling and such but does not retain rotation
@@ -537,7 +216,7 @@
     loadTextData: function(pageIndex, onComplete) {
       // console.log('loadTextData', pageIndex);
       var me = this;
-      let page = me.pages[pageIndex];
+
 
       if (me.pages[pageIndex].text !== null) {
         onComplete(me.pages[pageIndex].text);
@@ -547,191 +226,180 @@
         // console.log('.... ', pageIndex);
         exports.utils.log('text', 'Load text ' + (pageIndex + 1));
         let pdfPageCache = null;
-        this.requirePage(pageIndex + 1).then(function() {
-          me.pdfDocument.getPage(pageIndex + 1)
-            .then(function(pdfPage) {
-              pdfPageCache = pdfPage
-              return pdfPage.getTextContent({
-                normalizeWhitespace: true,
-                combineTextItems: true
-              });
-            })
-            .then(function(textContent) {
 
-              let pdfjs_fonts = me._map_font_data(pdfPageCache.commonObjs._objs)
-              // console.log(pageIndex, pdfjs_fonts);
-              let xod_stucts = [], xod_quads = [], xod_str = '';
-              let line_count = 0;
-              let lines = [];
-              for (let i = 0, len = textContent.items.length; i < len; i++) {
-                let fontProvider = pdfjs_fonts[textContent.items[i].fontName];
-                if (!fontProvider) {
-                  me.textCallbacksLookup[pageIndex].forEach(function(completeCB) {
-                    exports.utils.log('text', 'Callback ' + pageIndex);
-                    var selInfo = new XODText.SelectionInfo();
-                    completeCB(selInfo);
-                  });
-                  return;
-                }
+        me.pdfDocument.getPage(pageIndex + 1)
+          .then(function(pdfPage) {
+            pdfPageCache = pdfPage
+            return pdfPage.getTextContent({
+              normalizeWhitespace: true,
+              combineTextItems: true
+            });
+          })
+          .then(function(textContent) {
+            let xod_data = me._parseTextData(pageIndex, textContent, pdfPageCache)
+            // exports.utils.log('loadTextData for page ' + (pageIndex + 1));
 
-                let options = {
-                  item: textContent.items[i],
-                  pageMatrix: page.matrix,
-                  font: fontProvider,
-                  charCount: xod_str.length
-                }
+            var selInfo = new XODText.SelectionInfo();
+            selInfo.parseFromOld({
+              m_Struct: xod_data['struct'],
+              m_Str: xod_data['str'],
+              m_Offsets: xod_data['offsets'],
+              m_Quads: xod_data['quads'],
+              m_Ready: true
+            });
+            me.correctQuadsForPageRotation(pageIndex, selInfo);
+            me.pages[pageIndex].text = selInfo;
+            me.textCallbacksLookup[pageIndex].forEach(function(completeCB) {
+              exports.utils.log('text', 'Callback ' + pageIndex);
+              completeCB(selInfo);
+            });
+            delete me.textCallbacksLookup[pageIndex];
+          })
 
-                var line = new Line(options);
-                // console.log(line);
-                if (i > 0) {
-                  let prev_line = lines[i - 1];
-                  if (prev_line.top === line.top && prev_line.bottom === line.bottom) {
-                    lines.push(line);
-                    continue;
-                  }
-                  let top1 = prev_line.top;
-                  let top2 = line.top;
-                  let bottom1 = prev_line.bottom;
-                  let bottom2 = line.bottom;
-                  let res1 = bottom1 - top2;
-                  let res2 = top1 - bottom2;
-                  let proximity = line.left_x - prev_line.right_x
-                  if (
-                    (res1 >= 0 && res2 <= 0 || res1 <= 0 && res2 >= 0)
-                    && proximity < 10) {
-                    let new_top = Math.min(top1, top2, bottom1, bottom2)
-                    let new_bottom = Math.max(top1, top2, bottom1, bottom2)
-                    // prev_line.setTop(new_top)
-                    // line.setTop(new_top)
-                    // prev_line.setBottom(new_bottom)
-                    // line.setBottom(new_bottom)
-                  } else {
-                    prev_line.addNewline()
-                  }
-                }
-                lines.push(line);
-              }
-
-              for (let i = 0, len = lines.length; i < len; i++) {
-                // lines[i]._drawRect(ctx, page.scale)
-
-                lines[i].run()
-                // console.log(lines[i]);
-                xod_quads.push(lines[i].getQuads())
-                xod_str += lines[i].text
-              }
-              xod_quads = xod_quads.flat()
-
-              let _lines = xod_str.split('\n')
-              let pivot = 0
-              let pi = 0
-              var line_struct = []
-              for (let i = 0, len = _lines.length; i < len; i++) {
-                let line = _lines[i]
-                let lastIndex = pivot + line.length
-                pivot += line.length + 1
-                var struct = []
-
-                let words = line.split(' ')
-                for (let j = 0, len2 = words.length; j < len2; j++) {
-                  let word = words[j]
-                  let wlength = (word.length) ? word.length : 1 ;
-                  var offset = (word.length) ? 1 : 0 ;
-
-                  if (word.length) {
-                    let q = xod_quads.slice(pi, pi + word.length)
-                    let first_g = q[0]
-                    let last_g = q[q.length-1]
-                    let word_left_x = first_g[0]
-                    let word_right_x = last_g[2]
-                    struct.push([wlength, pi, wlength, word_left_x, word_right_x])
-                  }
-                  pi += wlength + offset
-                }
-                if (words[words.length-1] === '') {
-                  words.pop()
-                }
-                let line_quads = xod_quads.slice(pi - line.length - 1, pi - 1)
-                let line_first_g = line_quads[0]
-                let line_last_g = line_quads[line_quads.length - 1]
-                let line_left_x = line_first_g[0];
-                let line_right_x = line_last_g[2];
-                let line_top = line_first_g[1]
-                let line_bottom = line_first_g[7]
-                var st = [words.length,line.length, line_left_x, line_bottom, line_right_x, line_top]
-                var wt = struct.flat()
-                var _l = st.concat(wt)
-                line_struct = line_struct.concat(_l)
-              }
-
-              var data_struct = [_lines.length].concat(line_struct)
-              // console.log(xod_str);
-              // console.log(data_quads);
-              // console.log(data_struct);
-              var offsets = me._parse_text_offsets(xod_str)
-
-              var xod_data = {
-                offsets: offsets,
-                quads: xod_quads.flat(),
-                str: xod_str,
-                struct: data_struct
-              }
-              exports.utils.log('loadTextData for page ' + (pageIndex + 1));
-              // console.log(xod_data);
-              var selInfo = new XODText.SelectionInfo();
-              selInfo.parseFromOld({
-                m_Struct: xod_data['struct'],
-                m_Str: xod_data['str'],
-                m_Offsets: xod_data['offsets'],
-                m_Quads: xod_data['quads'],
-                m_Ready: true
-              });
-              me.correctQuadsForPageRotation(pageIndex, selInfo);
-              me.pages[pageIndex].text = selInfo;
-              me.textCallbacksLookup[pageIndex].forEach(function(completeCB) {
-                exports.utils.log('text', 'Callback ' + pageIndex);
-                completeCB(selInfo);
-              });
-              delete me.textCallbacksLookup[pageIndex];
-            })
-        })
         me.textCallbacksLookup[pageIndex] = [onComplete];
       }
     },
-    requirePage: function(pageNumber) {
-      if (arguments.length !== 1) {
-        throw new RangeError(arguments.length + " arguments passed into function 'requirePage'. Expected 1 argument. Function Signature: requirePage(number)");
-      }
-      if (pageNumber instanceof Promise) {
-        throw new TypeError("Received a Promise object in 1st input argument 'requirePage'. Promises require a 'yield' statement before being accessed.");
-      }
-      if (typeof pageNumber !== 'number') {
-        throw new TypeError("1st input argument '" + pageNumber + "' in function 'requirePage' is of type '" + (typeof pageNumber) + "'. Expected type 'number'. Function Signature: requirePage(number).");
-      }
-      if (pageNumber <= 0) {
-        throw new Error("1st input argument '" + pageNumber + "' in function 'requirePage' is invalid. Expected number between 1 and number of pages in the document.");
-      }
-      // if (this.hasDownloader) {
-      //   return this.transport.requirePage(this.docId, pageNumber);
-      // }
 
-      return Promise.resolve();
+
+
+
+
+    _parseTextData: function (pageIndex, textContent, pdfPageCache) {
+      let me = this;
+      let page = me.pages[pageIndex];
+      let pdfjs_fonts = me._mapFontData(pdfPageCache.commonObjs._objs)
+      // console.log('Page ', pageIndex  + 1, pdfjs_fonts);
+      let xod_stucts = [], xod_quads = [], xod_str = '';
+
+      let lines = [];
+      let itemsIndex = 0
+      for (let i = 0, len = textContent.items.length; i < len; i++) {
+        let fontProvider = pdfjs_fonts[textContent.items[i].fontName];
+
+        if (!fontProvider) {
+          // console.log('  Page', pageIndex  + 1, textContent.items[i].str , fontProvider);
+          continue;
+        }
+        // if (textContent.items[i].str.length === 1 && textContent.items[i].str === ' ') {
+        //   continue;
+        // }
+        let options = {
+          item: textContent.items[i],
+          pageMatrix: page.matrix,
+          font: fontProvider
+        }
+
+        var line = new Line(options);
+
+        // check if previous and current items are in the same lines
+        // by checking y coordinates
+        if (lines.length > 0 && itemsIndex > 0) {
+          let prev_line = lines[itemsIndex - 1];
+          let proximity = line.left_x - prev_line.right_x
+          if (prev_line.top === line.top && prev_line.bottom === line.bottom && proximity < 10) {
+            lines.push(line);
+            itemsIndex++;
+            continue;
+          }
+          let top1 = prev_line.top;
+          let top2 = line.top;
+          let bottom1 = prev_line.bottom;
+          let bottom2 = line.bottom;
+          let res1 = bottom1 - top2;
+          let res2 = top1 - bottom2;
+          if (
+            (res1 >= 0 && res2 <= 0 || res1 <= 0 && res2 >= 0)
+            && proximity < 10) {
+            let new_top = Math.min(top1, top2, bottom1, bottom2)
+            let new_bottom = Math.max(top1, top2, bottom1, bottom2)
+          } else {
+            // if current item has different y then previous item is
+            // seperate line, and add newline character to previous item
+            prev_line.addNewline()
+          }
+        }
+        lines.push(line);
+        itemsIndex++;
+      }
+
+
+      for (let i = 0, len = lines.length; i < len; i++) {
+        lines[i].parse()
+        xod_quads.push(lines[i].getQuads())
+        xod_str += lines[i].text
+      }
+
+      // array flat quad array
+      xod_quads = xod_quads.flat()
+
+      // after lines are normlized split it by \n
+      // and get struct data for XODText
+      // example "apple cherry orange\n"
+      let _lines = xod_str.split('\n');
+      let pivot = 0, _pos = 0, line_struct = [];
+
+      for (let i = 0, len = _lines.length; i < len; i++) {
+        let line = _lines[i]
+        let lastIndex = pivot + line.length
+        pivot += line.length + 1
+        var struct = []
+
+        // split line by space
+        // example ["apple", "cherry", "orange"]
+        let words = line.split(' ')
+        for (let j = 0, len2 = words.length; j < len2; j++) {
+          let word = words[j]
+          let wlength = (word.length) ? word.length : 1 ;
+          var offset = (word.length) ? 1 : 0 ;
+
+          if (word.length) {
+            let q = xod_quads.slice(_pos, _pos + word.length)
+            let first_g = q[0]
+            let last_g = q[q.length-1]
+            let word_left_x = first_g[0]
+            let word_right_x = last_g[2]
+            struct.push([wlength, _pos, wlength, word_left_x, word_right_x])
+          }
+          _pos += wlength + offset
+        }
+        if (words[words.length-1] === '') {
+          words.pop()
+        }
+        let line_quads = xod_quads.slice(_pos - line.length - 1, _pos - 1)
+        let line_first_g = line_quads[0]
+        let line_last_g = line_quads[line_quads.length - 1]
+        let line_left_x = line_first_g[0];
+        let line_right_x = line_last_g[2];
+        let line_top = line_first_g[1]
+        let line_bottom = line_first_g[7]
+        var st = [words.length,line.length, line_left_x, line_bottom, line_right_x, line_top]
+        var wt = struct.flat()
+        var _l = st.concat(wt)
+        line_struct = line_struct.concat(_l)
+      }
+
+      var data_struct = [_lines.length].concat(line_struct)
+      var offsets = me._parse_text_offsets(xod_str)
+
+
+
+      var xod_data = {
+        offsets: offsets,
+        quads: xod_quads.flat(),
+        str: xod_str,
+        struct: data_struct
+      }
+      return xod_data
     },
-
-
-
-
-
-
-    _map_font_data: function (_objs) {
-      var fonts = {}
-      for (var key in _objs) {
+    _mapFontData: function (_objs) {
+      let fonts = {}
+      for (let key in _objs) {
         fonts[_objs[key].data.loadedName] = _objs[key];
       }
       return fonts;
     },
     _parse_text_offsets: function (xod_str) {
-      var offsets = [];
+      let offsets = [];
       for(let i = 0, len = xod_str.length; i < len; i++) {
         offsets[i] = (xod_str.charAt(i) === ' ') ? -1 : i ;
       }
@@ -820,18 +488,6 @@
         verticalOffset: verticalOffset
       };
     },
-    _ensurePdfPageLoaded: function(pageView) {
-      var pageNumber = pageView.id;
-      var promise = this.pdfDocument['getPage'](pageNumber).then(function(pdfPage) {
-        if (!pageView.pdfPage) {
-          pageView.setPdfPage(pdfPage);
-        }
-        return pdfPage;
-      }).catch(function(reason) {
-        console.error('Unable to get page for page view', reason);
-      });
-      return promise;
-    },
     _cachePageRef: function(pageNum, pageRef) {
       if (!pageRef) {
         return;
@@ -839,17 +495,12 @@
       var refStr = pageRef.num + ' ' + pageRef.gen + ' R';
       this._pagesRefCache[refStr] = pageNum;
     },
-    _cachedPageNumber: function(pageRef) {
+    _getNumberFromRef: function(pageRef) {
       var refStr = pageRef.num + ' ' + pageRef.gen + ' R';
       return this._pagesRefCache && this._pagesRefCache[refStr] || null;
     },
 
   });
-
-  function isNum(v) {
-    return typeof v === 'number';
-  }
-
 
 
 

@@ -159,9 +159,6 @@
       // until rendering/image conversion is complete, to avoid display issues.
       this.canvas = canvas;
 
-      if (typeof PDFJSDev === 'undefined' || PDFJSDev.test('MOZCENTRAL || FIREFOX || GENERIC')) {
-        canvas.mozOpaque = true;
-      }
       var ctx = canvas.getContext('2d', {
         alpha: false
       });
