@@ -26,11 +26,28 @@
     this.renderingId = 'page' + this.id;
     this.pdfPage = null;
 
-
-    this.rotation = 0; // needed for PageInfo class
+    /**
+    this.width = width;
+    this.height = height;
+    this.text = null;
+    this.fullyLoaded = false;
+    this.resourceNames = [];
+    this.links = [];
+    this.matrix = null;
+    */
+    let pageDimensions = {
+        'width': options.defaultViewport.width,
+        'height': options.defaultViewport.height,
+        'matrix': options.matrix,
+        'rotation': defaultViewport.rotation,
+        'id': this.renderingId,
+        'pageNum': this.id
+    }
+    this.setFromPageData(pageDimensions)
+    this.text = null;
+    this.rotation = defaultViewport.rotation; // needed for PageInfo class
     this._rotation = 0; // internal user
     this.matrix = options.matrix; // needed for PageInfo class
-    this.matrix2 = options.matrix2;
     this.scale = options.scale || DEFAULT_SCALE;
     this.viewport = defaultViewport;
     this.pdfPageRotate = defaultViewport.rotation;

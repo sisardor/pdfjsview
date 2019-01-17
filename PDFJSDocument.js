@@ -1,7 +1,7 @@
 (function(exports) {
   'use strict';
 
-  pdfjsLib['GlobalWorkerOptions']['workerSrc'] = '../pdfjs/pdf.js/build/generic/build/pdf.worker.js';
+  pdfjsLib['GlobalWorkerOptions']['workerSrc'] = 'external/pdfjs/pdf.js/build/generic/build/pdf.worker.js';
 
   exports.CoreControls.PDFJSDocument = function PDFJSDocument() {
     this.bookmarks = [];
@@ -69,7 +69,6 @@
               var pageView = new exports.PDFJSPageView({
                 id: pageNum,
                 matrix: me.sanitisePageMatrix(viewport.transform, { w: viewport.width, h: viewport.height }),
-                matrix2: me.sanitisePageMatrix2(viewport.transform, { w: viewport.width, h: viewport.height }),
                 scale: me.scale,
                 defaultViewport: viewport.clone()
               });
@@ -149,6 +148,15 @@
             )
           }
         }
+        // if (typeof dest === 'string') {
+        //   this.pdfDocument.getDestination(dest).then((destArray) => {
+        //     resolve({
+        //       namedDest: dest,
+        //       explicitDest: destArray,
+        //     });
+        //   });
+        //   return;
+        // }
         return _b
       }
 
@@ -158,6 +166,7 @@
         }
         var bookmarks = [];
         for (var i = 0, len = outlines.length; i < len; i++) {
+          console.log(outlines[i]);
           bookmarks.push(copyBookmark(outlines[i]));
         }
         return bookmarks;
@@ -214,17 +223,6 @@
       tmtx.initCoordinates(1, 0, 0, -1, -bb.x1, bb.y2);
       return tmtx;
     },
-    sanitisePageMatrix2: function(matrix, currentPage) {
-      // Rectify the page matrix so it keeos scaling and such but does not retain rotation
-      // this is so the rotation can then be applied live later, but this page matrix can be applied at load time to
-      // make sure the coordinate system in which we are operating is always the same
-      var tmtx = new XODText.Matrix2D();
-      tmtx.initCoordinates.apply(tmtx, matrix);
-      var bb = this.calculateBoundingBox(tmtx, currentPage);
-      // tmtx.initCoordinates(-1, 0, 0, 1, bb.x1, bb.y2);
-      tmtx.initCoordinates(-1, 0, 0, 1, 612, 0)
-      return tmtx;
-    },
     loadTextData: function(pageIndex, onComplete) {
       // console.log('loadTextData', pageIndex);
       var me = this;
@@ -261,7 +259,7 @@
               m_Quads: xod_data['quads'],
               m_Ready: true
             });
-            me.correctQuadsForPageRotation(pageIndex, selInfo);
+            // me.correctQuadsForPageRotation(pageIndex, selInfo);
             me.pages[pageIndex].text = selInfo;
             me.textCallbacksLookup[pageIndex].forEach(function(completeCB) {
               exports.utils.log('text', 'Callback ' + pageIndex);

@@ -142,11 +142,17 @@
         //             `(${leftX}, ${bottom})` +
         //             `"${glyph.char}"`);
         transform[4] = glyph.charLength + transform[2] * 0 + transform[4]
+        // return [
+        //   leftX, top,
+        //   rightX, top,
+        //   rightX, bottom,
+        //   leftX, bottom
+        // ];
         return [
-          leftX, top,
-          rightX, top,
+          leftX, bottom,
           rightX, bottom,
-          leftX, bottom
+          rightX, top,
+          leftX, top
         ];
       })
       // console.log(quads.length, this.text.length);
