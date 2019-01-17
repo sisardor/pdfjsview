@@ -69,6 +69,7 @@
               var pageView = new exports.PDFJSPageView({
                 id: pageNum,
                 matrix: me.sanitisePageMatrix(viewport.transform, { w: viewport.width, h: viewport.height }),
+                matrix2: me.sanitisePageMatrix2(viewport.transform, { w: viewport.width, h: viewport.height }),
                 scale: me.scale,
                 defaultViewport: viewport.clone()
               });
@@ -213,6 +214,17 @@
       tmtx.initCoordinates(1, 0, 0, -1, -bb.x1, bb.y2);
       return tmtx;
     },
+    sanitisePageMatrix2: function(matrix, currentPage) {
+      // Rectify the page matrix so it keeos scaling and such but does not retain rotation
+      // this is so the rotation can then be applied live later, but this page matrix can be applied at load time to
+      // make sure the coordinate system in which we are operating is always the same
+      var tmtx = new XODText.Matrix2D();
+      tmtx.initCoordinates.apply(tmtx, matrix);
+      var bb = this.calculateBoundingBox(tmtx, currentPage);
+      // tmtx.initCoordinates(-1, 0, 0, 1, bb.x1, bb.y2);
+      tmtx.initCoordinates(-1, 0, 0, 1, 612, 0)
+      return tmtx;
+    },
     loadTextData: function(pageIndex, onComplete) {
       // console.log('loadTextData', pageIndex);
       var me = this;
@@ -277,12 +289,9 @@
         let fontProvider = pdfjs_fonts[textContent.items[i].fontName];
 
         if (!fontProvider) {
-          // console.log('  Page', pageIndex  + 1, textContent.items[i].str , fontProvider);
           continue;
         }
-        // if (textContent.items[i].str.length === 1 && textContent.items[i].str === ' ') {
-        //   continue;
-        // }
+
         let options = {
           item: textContent.items[i],
           pageMatrix: page.matrix,
@@ -295,7 +304,7 @@
         // by checking y coordinates
         if (lines.length > 0 && itemsIndex > 0) {
           let prev_line = lines[itemsIndex - 1];
-          let proximity = line.left_x - prev_line.right_x
+          let proximity = line.leftX - prev_line.rightX
           if (prev_line.top === line.top && prev_line.bottom === line.bottom && proximity < 10) {
             lines.push(line);
             itemsIndex++;
@@ -325,6 +334,7 @@
 
       for (let i = 0, len = lines.length; i < len; i++) {
         lines[i].parse()
+
         xod_quads.push(lines[i].getQuads())
         xod_str += lines[i].text
       }
@@ -346,7 +356,7 @@
 
         // split line by space
         // example ["apple", "cherry", "orange"]
-        let words = line.split(' ')
+        let words = (line == " ") ? [" "] : line.split(' ')
         for (let j = 0, len2 = words.length; j < len2; j++) {
           let word = words[j]
           let wlength = (word.length) ? word.length : 1 ;
@@ -362,26 +372,26 @@
           }
           _pos += wlength + offset
         }
-        if (words[words.length-1] === '') {
-          words.pop()
-        }
+
         let line_quads = xod_quads.slice(_pos - line.length - 1, _pos - 1)
         let line_first_g = line_quads[0]
+
         let line_last_g = line_quads[line_quads.length - 1]
         let line_left_x = line_first_g[0];
         let line_right_x = line_last_g[2];
         let line_top = line_first_g[1]
         let line_bottom = line_first_g[7]
-        var st = [words.length,line.length, line_left_x, line_bottom, line_right_x, line_top]
+        // filter out only words, if text has multi
+        // space we don't include it in struct
+        let wordCount = words.filter(item => item.length).length
+        var st = [wordCount,line.length, line_left_x, line_bottom, line_right_x, line_top]
         var wt = struct.flat()
         var _l = st.concat(wt)
         line_struct = line_struct.concat(_l)
       }
 
       var data_struct = [_lines.length].concat(line_struct)
-      var offsets = me._parse_text_offsets(xod_str)
-
-
+      var offsets = me._parseTextOffsets(xod_str)
 
       var xod_data = {
         offsets: offsets,
@@ -398,10 +408,14 @@
       }
       return fonts;
     },
-    _parse_text_offsets: function (xod_str) {
+    _parseTextOffsets: function (xod_str) {
       let offsets = [];
       for(let i = 0, len = xod_str.length; i < len; i++) {
-        offsets[i] = (xod_str.charAt(i) === ' ') ? -1 : i ;
+        offsets[i] =(xod_str.charAt(i) === ' ')
+          ? -1
+          : (xod_str.charAt(i) === '\n')
+            ? -2
+            : i ;
       }
       return offsets;
     },
