@@ -1,0 +1,19 @@
+{
+  "name": "pdfjsview",
+  "version": "1.0.0",
+  "description": "",
+  "main": "PDFJSDocument.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sisardor/pdfjsview.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/sisardor/pdfjsview/issues"
+  },
+  "homepage": "https://github.com/sisardor/pdfjsview#readme"
+}
