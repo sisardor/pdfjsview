@@ -1,7 +1,7 @@
 (function(exports) {
   'use strict';
 
-  pdfjsLib['GlobalWorkerOptions']['workerSrc'] = '//mozilla.github.io/pdf.js/build/pdf.worker.js';
+  pdfjsLib['GlobalWorkerOptions']['workerSrc'] = '../pdfjs/pdf.js/build/generic/build/pdf.worker.js';
 
   exports.CoreControls.PDFJSDocument = function PDFJSDocument() {
     this.bookmarks = [];
