@@ -248,6 +248,8 @@
             });
           })
           .then(function(textContent) {
+            // TODO:
+            // handle case where there is no text at all
             let xod_data = me._parseTextData(pageIndex, textContent, pdfPageCache)
             // exports.utils.log('loadTextData for page ' + (pageIndex + 1));
 
