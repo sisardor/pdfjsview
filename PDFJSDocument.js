@@ -1,7 +1,7 @@
 (function(exports) {
   'use strict';
 
-  pdfjsLib['GlobalWorkerOptions']['workerSrc'] = 'external/pdfjs/pdf.js/build/generic/build/pdf.worker.js';
+  pdfjsLib.GlobalWorkerOptions.workerSrc = '../pdfjs/pdf.worker.js';
 
   exports.CoreControls.PDFJSDocument = function PDFJSDocument() {
     this.bookmarks = [];
@@ -64,8 +64,8 @@
           var getPagesLeft = pageCount;
 
           var _loop = function _loop(pageNum) {
-            pdf['getPage'](pageNum).then(function(pdfPage) {
-              var viewport = pdfPage['getViewport']({ scale: me.scale });
+            pdf.getPage(pageNum).then(function(pdfPage) {
+              var viewport = pdfPage.getViewport({ scale: me.scale });
               var pageView = new exports.PDFJSPageView({
                 id: pageNum,
                 matrix: me.sanitisePageMatrix(viewport.transform, { w: viewport.width, h: viewport.height }),
@@ -73,7 +73,11 @@
                 defaultViewport: viewport.clone()
               });
               pageView.setPdfPage(pdfPage);
-
+              // pdfPage.getAnnotations().then(function(data) {
+              //   // console.log(JSON.stringify(data, null, 4));
+              //   me._buildLinkAnnotation(data, pageNum, pageView.matrix)
+              //   // now display them in annotation layer div
+              // });
               me.pages.push(pageView);
               me.pagesById[pageNum] = pageView;
 
@@ -160,7 +164,7 @@
         return _b
       }
 
-      return me.pdfDocument['getOutline']().then(function(outlines) {
+      return me.pdfDocument.getOutline().then(function(outlines) {
         if (!outlines) {
           return [];
         }
@@ -271,11 +275,59 @@
         me.textCallbacksLookup[pageIndex] = [onComplete];
       }
     },
+    // 'extractXFDF': function(pages) {
+    //   console.error('extractXFDF');
+    // },
 
+    // 'loadAnnotations': function (pageNum, callback) {
+    //   var me = this;
+    //   pageNum = pageNum[0]
+    //   me.pdfDocument.getPage(pageNum + 1).then(function(pdfPage) {
+    //     pdfPage.getAnnotations().then(function(data) {
+    //       var pageview = me.pages[pageNum]
+    //       var results = me._buildLinkAnnotation(data, pageNum + 1, pageview.matrix)
+    //       return {
+    //         pages: pageNum,
+    //         annots: results
+    //       }
+    //       // callback(null, results)
+    //     });
+    //   })
+    // },
 
+    // 'extractXFDF': function (pageNum) {
+    //   let me = this;
+    //   let _pageNum = pageNum[0]
+    //   return me.pdfDocument.getPage(_pageNum).then(function(pdfPage) {
+    //     return pdfPage.getAnnotations().then(function(data) {
+    //       let pageview = me.pages[_pageNum - 1]
+    //       let results = me._buildLinkAnnotation(data, _pageNum, pageview.matrix)
+    //       return {
+    //         'pages': pageNum,
+    //         'annots': results
+    //       }
+    //     });
+    //   })
+    // },
 
-
-
+    _buildLinkAnnotation: function (data, pageNum, pageMatrix) {
+      let me = this;
+      let links = data.filter(item => item.subtype === 'Link')
+      let annots = []
+      links.forEach(_link => {
+        let opts = {
+          data: _link,
+          pageMatrix: pageMatrix,
+          pageNum: pageNum,
+          parseDest: me._getXYDest.bind(me),
+          parsePageNumber: me._getNumberFromRef.bind(me)
+        }
+        let annot = AnnotationElementFactory.create(opts)
+        // console.log(annot)
+        annots.push(annot)
+      })
+      return annots
+    },
     _parseTextData: function (pageIndex, textContent, pdfPageCache) {
       let me = this;
       let page = me.pages[pageIndex];
@@ -451,8 +503,8 @@
           // _top_ left of the page (not the obvious bottom left,
           // since aligning the bottom of the intended page with the
           // top of the window is rarely helpful).
-          // x = x !== null ? x : 0;
-          // y = y !== null ? y : pageHeight;
+          x = x !== null ? x : 0;
+          y = y !== null ? y : pageHeight;
           break;
         case 'Fit':
         case 'FitB':
@@ -473,8 +525,8 @@
         case 'FitV':
         case 'FitBV':
           x = destArray[2];
-          // width = pageWidth;
-          // height = pageHeight;
+          width = pageWidth;
+          height = pageHeight;
           scale = 'page-height';
           break;
         case 'FitR':
@@ -496,10 +548,14 @@
           console.error(destArray[1].name + "is not a valid destination type.");
           return;
       }
+      var coor = pageView.matrix.mult({x: x, y: y})
       return {
-        x: x,
-        y: y,
-        verticalOffset: verticalOffset
+        x: coor.x,
+        y: coor.y,
+        verticalOffset: verticalOffset,
+        fit: destArray[1].name,
+        width: width,
+        height: height,
       };
     },
     _cachePageRef: function(pageNum, pageRef) {

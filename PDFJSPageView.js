@@ -1,7 +1,7 @@
 (function(exports) {
   'use strict';
 
-  var RenderingCancelledException = pdfjsLib['RenderingCancelledException'];
+  var RenderingCancelledException = pdfjsLib.RenderingCancelledException;
   var DEFAULT_SCALE = 1.0;
 
   var MULTIPLIER = exports.utils.getCanvasMultiplier();
@@ -72,7 +72,7 @@
       this.pdfPageRotate = pdfPage.rotate;
 
       var totalRotation = (this._rotation + this.pdfPageRotate) % 4 * 90;
-      this.viewport = pdfPage['getViewport']({ scale: this.scale * MULTIPLIER, rotation: totalRotation });
+      this.viewport = pdfPage.getViewport({ scale: this.scale * MULTIPLIER, rotation: totalRotation });
       this.stats = pdfPage.stats;
       // this.reset();
     },
@@ -80,7 +80,7 @@
     destroy: function destroy() {
       this.reset();
       if (this.pdfPage) {
-        this.pdfPage['cleanup']();
+        this.pdfPage.cleanup();
       }
     },
 
@@ -150,7 +150,7 @@
         renderInteractiveForms: this.renderInteractiveForms
       };
 
-      var renderTask = this.pdfPage['render'](renderContext);
+      var renderTask = this.pdfPage.render(renderContext);
 
       renderTask.promise.then(function() {
         showCanvas();
