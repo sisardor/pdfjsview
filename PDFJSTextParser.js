@@ -13,7 +13,7 @@
       let matrix = opts.pageMatrix;
 
       // fontMatrix is used when calculating char width
-      let fontMatrix = (opts.font.data.fontMatrix) ? opts.font.data.fontMatrix : [0.001]
+      let fontMatrix = (opts.font.fontMatrix) ? opts.font.fontMatrix : [0.001]
       let x = transform[4];
       let y = transform[5];
       let width = item.width;
@@ -43,7 +43,7 @@
       this.text = text
       this._width = width;
       this._height = height;
-      this._font = opts.font.data;
+      this._font = opts.font;
       this.quads = [];
 
 
@@ -174,16 +174,18 @@
         this.text += '\n';
       }
     }
+
     _drawRect(ctx, scale){
-      var mul = exports.utils.getCanvasMultiplier();
+      let mul = exports.utils.getCanvasMultiplier();
       scale = scale * mul;
-      var height = this.bottom - this.top;
+      let height = this.bottom - this.top;
       // ctx.translate(0.5, 0.5)
       // ctx.setLineDash([6]);
       ctx.rect(this.leftX * scale, this.top * scale, this._width * scale, height * scale);
       ctx.stroke()
       return;
     }
+
     toString() {
         return `"${this.text}"`
     }
@@ -246,8 +248,8 @@
       } else {
 
         // calculate character width
-        var tx = 0;
-        var ty = 0;
+        let tx = 0;
+        let ty = 0;
         let charSpacing = 0;
         let textState = {fontSize: 1, textHScale: 1}
         let w0 = this.width * fontMatrix[0];

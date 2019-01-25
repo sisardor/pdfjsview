@@ -44,9 +44,6 @@
         case AnnotationType.LINK:
           return new LinkAnnotationElement(parameters);
 
-        case AnnotationType.TEXT:
-          return new TextAnnotationElement(parameters);
-
         default:
           return new AnnotationElement(parameters);
       }
@@ -55,30 +52,33 @@
   }
 
   class LinkAnnotationElement extends Annotations.Link {
-    constructor(parameters) {
-      super(parameters.data);
-      let data = parameters.data
+    constructor(options) {
+      super(options.data);
+      let data = options.data
 
-      var points = data.rect
-      var point1 = new Annotations.Point(points[0], points[1]);
-      var point2 = new Annotations.Point(points[2], points[3]);
-      parameters.pageMatrix.mult(point1);
-      parameters.pageMatrix.mult(point2);
+      let points = data.rect
+      let point1 = new Annotations.Point(points[0], points[1]);
+      let point2 = new Annotations.Point(points[2], points[3]);
+      options.pageMatrix.mult(point1);
+      options.pageMatrix.mult(point2);
 
-      // var rect = new Annotations.Rect(point1.x, point1.y, point2.x, point2.y);
+      // let rect = new Annotations.Rect(point1.x, point1.y, point2.x, point2.y);
 
       this.setX(point1.x)
       this.setY(point2.y)
       this.setWidth(point2.x - point1.x)
       this.setHeight(point1.y - point2.y)
-      this.setPageNumber(parameters.pageNum);
+      this.setPageNumber(options.pageNum);
       if (data.url) {
         let uri = (data.url) ? data.url : "https://www.google.com"
         this.addAction('U', new Actions.URI({ uri: uri }));
       } else if(data.dest) {
         let destArray = data.dest
-        let parsedDest = parameters.parseDest(parameters.pageNum, destArray)
-        let parsedPageNum = parameters.parsePageNumber(data.dest[0])
+        if (typeof destArray === 'string') {
+          destArray = options.destinations[destArray]
+        }
+        let parsedDest = options.parseDest(options.pageNum, destArray)
+        let parsedPageNum = options.parsePageNumber(data.dest[0])
         let opts =  {
           bottom: parsedDest.y,
           fit: parsedDest.fit,
